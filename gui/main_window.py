@@ -29,6 +29,8 @@ from PyQt5.QtCore import (
 
 from adb.controller import ADBController
 
+from core.automation_engine import AutomationEngine
+
 
 class MainWindow(QMainWindow):
 
@@ -41,6 +43,11 @@ class MainWindow(QMainWindow):
         # ==================================================
 
         self.adb = ADBController()
+
+        self.automation_engine = AutomationEngine(
+            adb=self.adb,
+            logger=self.write_log,
+        )
 
         # ==================================================
         # SCREENSHOT / PREVIEW STATE
@@ -321,6 +328,15 @@ class MainWindow(QMainWindow):
         )
 
         # ==================================================
+        # RUN TEST QUEST
+        # ==================================================
+        self.run_test_quest_button = QPushButton("Run Test Quest")
+        self.run_test_quest_button.setEnabled(False)
+        self.run_test_quest_button.clicked.connect(self.run_test_quest)
+
+        layout.addWidget(self.run_test_quest_button)
+
+        # ==================================================
         # DEBUG MODE
         # ==================================================
 
@@ -477,6 +493,8 @@ class MainWindow(QMainWindow):
             self.detect_tap_verify_button.setEnabled(
                 True
             )
+
+            self.run_test_quest_button.setEnabled(True)
 
             self.write_log(
                 f"ADB connected: "
@@ -2469,35 +2487,22 @@ class MainWindow(QMainWindow):
 
         self.update_preview()
 
-import cv2
-from pathlib import Path
-from datetime import datetime
+    def run_test_quest(self):
+        self.write_log("================================")
+        self.write_log("[GUI] Run Test Quest")
 
-from PyQt5.QtWidgets import (
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
-    QLabel,
-    QPushButton,
-    QTextEdit,
-    QCheckBox,
-    QFileDialog,
-)
+        self.run_test_quest_button.setEnabled(False)
 
-from PyQt5.QtGui import (
-    QImage,
-    QPixmap,
-    QPainter,
-    QPen,
-    QColor,
-)
+        success = self.automation_engine.run_test_quest()
 
-from PyQt5.QtCore import (
-    Qt,
-    QPoint,
-    QTimer,
-)
+        if success:
+            self.write_log("[GUI] Test Quest SUCCESS")
+        else:
+            self.write_log("[GUI] Test Quest FAILED")
 
-from adb.controller import ADBController
+        self.run_test_quest_button.setEnabled(True)
+
+        self.write_log("================================")
+
 
 
