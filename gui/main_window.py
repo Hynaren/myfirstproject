@@ -30,6 +30,7 @@ from PyQt5.QtCore import (
 from adb.controller import ADBController
 
 from core.automation_engine import AutomationEngine
+from core.action_engine import ActionEngine
 
 
 class MainWindow(QMainWindow):
@@ -45,6 +46,12 @@ class MainWindow(QMainWindow):
         self.adb = ADBController()
 
         self.automation_engine = AutomationEngine(
+            adb=self.adb,
+            logger=self.write_log,
+        )
+
+        # Vision test actions use the same ADB connection.
+        self.action_engine = ActionEngine(
             adb=self.adb,
             logger=self.write_log,
         )
@@ -866,1257 +873,183 @@ class MainWindow(QMainWindow):
     def detect_image(self):
 
         if not self.adb.is_connected():
-
-            self.write_log(
-                "ADB device is not connected."
-            )
-
+            self.write_log("ADB device is not connected.")
             return
-
-        self.write_log(
-            "================================"
-        )
-
-        self.write_log(
-            "Image Detection started."
-        )
-
-        self.write_log(
-            "Taking fresh screenshot..."
-        )
-
-        image = self.adb.screenshot()
-
-        if image is None:
-
-            self.write_log(
-                "Screenshot failed."
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        self.current_image = image.copy()
 
         template_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select Template Image",
             str(self.template_dir),
-            "Image Files (*.png *.jpg *.jpeg *.bmp)"
+            "Image Files (*.png *.jpg *.jpeg *.bmp)",
         )
 
         if not template_path:
-
-            self.write_log(
-                "Template selection cancelled."
-            )
-
-            self.write_log(
-                "================================"
-            )
-
+            self.write_log("Template selection cancelled.")
             return
 
-        self.template_path = Path(
-            template_path
-        )
+        self.template_path = Path(template_path)
+        self.write_log("================================")
+        self.write_log("Image Detection started.")
+        self.write_log(f"Template: {self.template_path}")
 
-        self.write_log(
-            "Template:"
-        )
+        result = self.action_engine.detect(self.template_path)
+        image = self.action_engine.last_screenshot
 
-        self.write_log(
-            f"{self.template_path}"
-        )
-
-        template = cv2.imread(
-            str(self.template_path),
-            cv2.IMREAD_COLOR,
-        )
-
-        if template is None:
-
-            self.write_log(
-                "Failed to load template image."
-            )
-
-            self.write_log(
-                "================================"
-            )
-
+        if image is None:
+            self.write_log("Screenshot failed.")
+            self.write_log("================================")
             return
 
-        screen_height, screen_width = (
-            image.shape[:2]
-        )
+        self.current_image = image.copy()
+        self.clear_detection()
 
-        template_height, template_width = (
-            template.shape[:2]
-        )
-
-        self.write_log(
-            f"Screen size: "
-            f"{screen_width} x {screen_height}"
-        )
-
-        self.write_log(
-            f"Template size: "
-            f"{template_width} x "
-            f"{template_height}"
-        )
-
-        if (
-            template_width > screen_width
-            or template_height > screen_height
-        ):
-
-            self.write_log(
-                "Template is larger than screenshot."
-            )
-
-            self.write_log(
-                "Detection cancelled."
-            )
-
-            self.write_log(
-                "================================"
-            )
-
+        if result is None:
+            self.display_image(image)
+            self.write_log("Detection failed: no result.")
+            self.write_log("================================")
             return
 
-        screen_gray = cv2.cvtColor(
-            image,
-            cv2.COLOR_BGR2GRAY,
-        )
+        self.detect_confidence = result.confidence
 
-        template_gray = cv2.cvtColor(
-            template,
-            cv2.COLOR_BGR2GRAY,
-        )
-
-        self.write_log(
-            "Running OpenCV template matching..."
-        )
-
-        result = cv2.matchTemplate(
-            screen_gray,
-            template_gray,
-            cv2.TM_CCOEFF_NORMED,
-        )
-
-        min_val, max_val, min_loc, max_loc = (
-            cv2.minMaxLoc(result)
-        )
-
-        confidence = float(
-            max_val
-        )
-
-        self.detect_confidence = confidence
-
-        self.write_log(
-            f"Best match confidence: "
-            f"{confidence:.4f}"
-        )
-
-        if confidence < self.detection_threshold:
-
-            self.clear_detection()
-
+        if not result.found:
             self.detection_label.setText(
-                "Detection: Not found"
+                f"Detection: Not found "
+                f"(Confidence: {result.confidence:.4f})"
             )
-
+            self.display_image(image)
             self.write_log(
-                "Detection FAILED."
+                f"Detection FAILED -> confidence={result.confidence:.4f}"
             )
-
-            self.write_log(
-                f"Confidence "
-                f"{confidence:.4f} "
-                f"< threshold "
-                f"{self.detection_threshold:.2f}"
-            )
-
-            self.write_log(
-                "No tap performed."
-            )
-
-            self.display_image(
-                image
-            )
-
-            self.write_log(
-                "================================"
-            )
-
+            self.write_log("================================")
             return
-
-        top_left_x = int(
-            max_loc[0]
-        )
-
-        top_left_y = int(
-            max_loc[1]
-        )
-
-        bottom_right_x = (
-            top_left_x
-            + template_width
-        )
-
-        bottom_right_y = (
-            top_left_y
-            + template_height
-        )
-
-        center_x = (
-            top_left_x
-            + template_width // 2
-        )
-
-        center_y = (
-            top_left_y
-            + template_height // 2
-        )
 
         self.detected = True
-
-        self.detect_x = center_x
-        self.detect_y = center_y
-
-        self.detect_width = template_width
-        self.detect_height = template_height
+        self.detect_x = result.x
+        self.detect_y = result.y
+        self.detect_width = result.width
+        self.detect_height = result.height
 
         self.detection_label.setText(
-            f"Detection: "
-            f"X: {center_x}, "
-            f"Y: {center_y}, "
-            f"Confidence: {confidence:.4f}"
+            f"Detection: X: {result.x}, Y: {result.y}, "
+            f"Confidence: {result.confidence:.4f}"
         )
 
-        self.write_log(
-            "Detection SUCCESS."
-        )
+        self.write_log("Detection SUCCESS.")
+        self.write_log(f"Center -> X: {result.x}, Y: {result.y}")
+        self.write_log(f"Size -> {result.width} x {result.height}")
+        self.write_log(f"Confidence -> {result.confidence:.4f}")
 
-        self.write_log(
-            f"Top-left -> "
-            f"X: {top_left_x}, "
-            f"Y: {top_left_y}"
-        )
-
-        self.write_log(
-            f"Bottom-right -> "
-            f"X: {bottom_right_x}, "
-            f"Y: {bottom_right_y}"
-        )
-
-        self.write_log(
-            f"Center -> "
-            f"X: {center_x}, "
-            f"Y: {center_y}"
-        )
-
-        self.write_log(
-            f"Confidence -> "
-            f"{confidence:.4f}"
-        )
-
-        self.display_image(
-            image
-        )
-
-        self.write_log(
-            "Detection result displayed."
-        )
-
-        self.write_log(
-            "================================"
-        )
-
-    # ==================================================
-    # DETECT & TAP
-    # ==================================================
-
+        self.display_image(image)
+        self.write_log("Detection result displayed.")
+        self.write_log("================================")
     def detect_and_tap(self):
 
         if not self.adb.is_connected():
-
-            self.write_log(
-                "ADB device is not connected."
-            )
-
+            self.write_log("ADB device is not connected.")
             return
-
-        self.write_log(
-            "================================"
-        )
-
-        self.write_log(
-            "Detect & Tap started."
-        )
-
-        self.detect_tap_button.setEnabled(
-            False
-        )
-
-        self.write_log(
-            "Taking fresh screenshot..."
-        )
-
-        image = self.adb.screenshot()
-
-        if image is None:
-
-            self.write_log(
-                "Screenshot failed."
-            )
-
-            self.write_log(
-                "Detect & Tap cancelled."
-            )
-
-            self.detect_tap_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        self.current_image = image.copy()
 
         template_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select Template Image",
             str(self.template_dir),
-            "Image Files (*.png *.jpg *.jpeg *.bmp)"
+            "Image Files (*.png *.jpg *.jpeg *.bmp)",
         )
 
         if not template_path:
-
-            self.write_log(
-                "Template selection cancelled."
-            )
-
-            self.write_log(
-                "Detect & Tap cancelled."
-            )
-
-            self.detect_tap_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
+            self.write_log("Template selection cancelled.")
             return
 
-        self.template_path = Path(
-            template_path
-        )
+        self.template_path = Path(template_path)
+        self.detect_tap_button.setEnabled(False)
+        self.write_log("================================")
+        self.write_log("Detect & Tap started.")
+        self.write_log(f"Template: {self.template_path}")
 
-        self.write_log(
-            "Template:"
-        )
+        success = self.action_engine.detect_and_tap(self.template_path)
+        image = self.action_engine.last_screenshot
+        result = self.action_engine.last_detection
 
-        self.write_log(
-            f"{self.template_path}"
-        )
-
-        template = cv2.imread(
-            str(self.template_path),
-            cv2.IMREAD_COLOR,
-        )
-
-        if template is None:
-
-            self.write_log(
-                "Failed to load template image."
-            )
-
-            self.write_log(
-                "Detect & Tap cancelled."
-            )
-
-            self.detect_tap_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        screen_height, screen_width = (
-            image.shape[:2]
-        )
-
-        template_height, template_width = (
-            template.shape[:2]
-        )
-
-        self.write_log(
-            f"Screen size: "
-            f"{screen_width} x {screen_height}"
-        )
-
-        self.write_log(
-            f"Template size: "
-            f"{template_width} x "
-            f"{template_height}"
-        )
-
-        if (
-            template_width > screen_width
-            or template_height > screen_height
-        ):
-
-            self.write_log(
-                "Template is larger than screenshot."
-            )
-
-            self.write_log(
-                "Detect & Tap cancelled."
-            )
-
-            self.detect_tap_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        screen_gray = cv2.cvtColor(
-            image,
-            cv2.COLOR_BGR2GRAY,
-        )
-
-        template_gray = cv2.cvtColor(
-            template,
-            cv2.COLOR_BGR2GRAY,
-        )
-
-        self.write_log(
-            "Running OpenCV template matching..."
-        )
-
-        result = cv2.matchTemplate(
-            screen_gray,
-            template_gray,
-            cv2.TM_CCOEFF_NORMED,
-        )
-
-        min_val, max_val, min_loc, max_loc = (
-            cv2.minMaxLoc(result)
-        )
-
-        confidence = float(
-            max_val
-        )
-
-        self.detect_confidence = confidence
-
-        self.write_log(
-            f"Best match confidence: "
-            f"{confidence:.4f}"
-        )
-
-        if confidence < self.detection_threshold:
-
+        if image is not None:
+            self.current_image = image.copy()
             self.clear_detection()
 
+        if result is not None and result.found:
+            self.detected = True
+            self.detect_x = result.x
+            self.detect_y = result.y
+            self.detect_width = result.width
+            self.detect_height = result.height
+            self.detect_confidence = result.confidence
             self.detection_label.setText(
-                "Detection: Not found"
+                f"Detection: X: {result.x}, Y: {result.y}, "
+                f"Confidence: {result.confidence:.4f}"
             )
 
-            self.write_log(
-                "Detection FAILED."
-            )
+        if image is not None:
+            self.display_image(image)
 
-            self.write_log(
-                f"Confidence "
-                f"{confidence:.4f} "
-                f"< threshold "
-                f"{self.detection_threshold:.2f}"
-            )
-
-            self.write_log(
-                "No tap performed."
-            )
-
-            self.display_image(
-                image
-            )
-
-            self.detect_tap_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        top_left_x = int(
-            max_loc[0]
-        )
-
-        top_left_y = int(
-            max_loc[1]
-        )
-
-        bottom_right_x = (
-            top_left_x
-            + template_width
-        )
-
-        bottom_right_y = (
-            top_left_y
-            + template_height
-        )
-
-        center_x = (
-            top_left_x
-            + template_width // 2
-        )
-
-        center_y = (
-            top_left_y
-            + template_height // 2
-        )
-
-        self.detected = True
-
-        self.detect_x = center_x
-        self.detect_y = center_y
-
-        self.detect_width = template_width
-        self.detect_height = template_height
-
-        self.detection_label.setText(
-            f"Detection: "
-            f"X: {center_x}, "
-            f"Y: {center_y}, "
-            f"Confidence: {confidence:.4f}"
-        )
-
-        self.write_log(
-            "Detection SUCCESS."
-        )
-
-        self.write_log(
-            f"Top-left -> "
-            f"X: {top_left_x}, "
-            f"Y: {top_left_y}"
-        )
-
-        self.write_log(
-            f"Bottom-right -> "
-            f"X: {bottom_right_x}, "
-            f"Y: {bottom_right_y}"
-        )
-
-        self.write_log(
-            f"Center -> "
-            f"X: {center_x}, "
-            f"Y: {center_y}"
-        )
-
-        self.write_log(
-            f"Confidence -> "
-            f"{confidence:.4f}"
-        )
-
-        self.display_image(
-            image
-        )
-
-        self.write_log(
-            "Detection result displayed."
-        )
-
-        self.write_log(
-            f"Preparing tap at detected center -> "
-            f"X: {center_x}, Y: {center_y}"
-        )
-
-        self.write_log(
-            "Sending ADB tap..."
-        )
-
-        tap_success = self.adb.tap(
-            center_x,
-            center_y,
-        )
-
-        if tap_success:
-
-            self.write_log(
-                f"Tap successful -> "
-                f"X: {center_x}, "
-                f"Y: {center_y}"
-            )
-
-            self.write_log(
-                "Detect & Tap completed successfully."
-            )
-
+        if success:
+            self.write_log("Detect & Tap completed successfully.")
         else:
+            self.write_log("Detect & Tap FAILED.")
 
-            self.write_log(
-                f"Tap FAILED -> "
-                f"X: {center_x}, "
-                f"Y: {center_y}"
-            )
-
-            self.write_log(
-                "Detection succeeded, "
-                "but ADB tap failed."
-            )
-
-        self.detect_tap_button.setEnabled(
-            True
-        )
-
-        self.write_log(
-            "================================"
-        )
-
-    # ==================================================
-    # DETECT → TAP → VERIFY
-    # ==================================================
-
+        self.detect_tap_button.setEnabled(True)
+        self.write_log("================================")
     def detect_tap_and_verify(self):
 
         if not self.adb.is_connected():
-
-            self.write_log(
-                "ADB device is not connected."
-            )
-
+            self.write_log("ADB device is not connected.")
             return
-
-        self.write_log(
-            "================================"
-        )
-
-        self.write_log(
-            "Detect → Tap → Verify started."
-        )
-
-        self.detect_tap_verify_button.setEnabled(
-            False
-        )
-
-        self.write_log(
-            "Taking fresh screenshot for detection..."
-        )
-
-        image = self.adb.screenshot()
-
-        if image is None:
-
-            self.write_log(
-                "Screenshot failed."
-            )
-
-            self.write_log(
-                "Detect → Tap → Verify cancelled."
-            )
-
-            self.detect_tap_verify_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        self.current_image = image.copy()
-
-        # ------------------------------------------------
-        # SELECT TEMPLATE
-        # ------------------------------------------------
 
         template_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select Template Image",
             str(self.template_dir),
-            "Image Files (*.png *.jpg *.jpeg *.bmp)"
+            "Image Files (*.png *.jpg *.jpeg *.bmp)",
         )
 
         if not template_path:
-
-            self.write_log(
-                "Template selection cancelled."
-            )
-
-            self.write_log(
-                "Detect → Tap → Verify cancelled."
-            )
-
-            self.detect_tap_verify_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
+            self.write_log("Template selection cancelled.")
             return
 
-        self.template_path = Path(
-            template_path
-        )
-
-        self.write_log(
-            "Template:"
-        )
-
-        self.write_log(
-            f"{self.template_path}"
-        )
-
-        # ------------------------------------------------
-        # LOAD TEMPLATE
-        # ------------------------------------------------
-
-        template = cv2.imread(
-            str(self.template_path),
-            cv2.IMREAD_COLOR,
-        )
-
-        if template is None:
-
-            self.write_log(
-                "Failed to load template image."
-            )
-
-            self.write_log(
-                "Detect → Tap → Verify cancelled."
-            )
-
-            self.detect_tap_verify_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        # ------------------------------------------------
-        # SIZE CHECK
-        # ------------------------------------------------
-
-        screen_height, screen_width = (
-            image.shape[:2]
-        )
-
-        template_height, template_width = (
-            template.shape[:2]
-        )
-
-        self.write_log(
-            f"Screen size: "
-            f"{screen_width} x {screen_height}"
-        )
-
-        self.write_log(
-            f"Template size: "
-            f"{template_width} x "
-            f"{template_height}"
-        )
-
-        if (
-            template_width > screen_width
-            or template_height > screen_height
-        ):
-
-            self.write_log(
-                "Template is larger than screenshot."
-            )
-
-            self.write_log(
-                "Detect → Tap → Verify cancelled."
-            )
-
-            self.detect_tap_verify_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        # ------------------------------------------------
-        # DETECTION
-        # ------------------------------------------------
-
-        screen_gray = cv2.cvtColor(
-            image,
-            cv2.COLOR_BGR2GRAY,
-        )
-
-        template_gray = cv2.cvtColor(
-            template,
-            cv2.COLOR_BGR2GRAY,
-        )
-
-        self.write_log(
-            "Running OpenCV template matching..."
-        )
-
-        result = cv2.matchTemplate(
-            screen_gray,
-            template_gray,
-            cv2.TM_CCOEFF_NORMED,
-        )
-
-        min_val, max_val, min_loc, max_loc = (
-            cv2.minMaxLoc(result)
-        )
-
-        confidence = float(
-            max_val
-        )
-
-        self.detect_confidence = confidence
-
-        self.write_log(
-            f"Detection confidence: "
-            f"{confidence:.4f}"
-        )
-
-        if confidence < self.detection_threshold:
-
-            self.clear_detection()
-
-            self.detection_label.setText(
-                "Detection: Not found"
-            )
-
-            self.write_log(
-                "Detection FAILED."
-            )
-
-            self.write_log(
-                f"Confidence "
-                f"{confidence:.4f} "
-                f"< threshold "
-                f"{self.detection_threshold:.2f}"
-            )
-
-            self.write_log(
-                "No tap performed."
-            )
-
-            self.display_image(
-                image
-            )
-
-            self.detect_tap_verify_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        # ------------------------------------------------
-        # DETECTION COORDINATES
-        # ------------------------------------------------
-
-        top_left_x = int(
-            max_loc[0]
-        )
-
-        top_left_y = int(
-            max_loc[1]
-        )
-
-        bottom_right_x = (
-            top_left_x
-            + template_width
-        )
-
-        bottom_right_y = (
-            top_left_y
-            + template_height
-        )
-
-        center_x = (
-            top_left_x
-            + template_width // 2
-        )
-
-        center_y = (
-            top_left_y
-            + template_height // 2
-        )
-
-        # ------------------------------------------------
-        # STORE DETECTION
-        # ------------------------------------------------
-
-        self.detected = True
-
-        self.detect_x = center_x
-        self.detect_y = center_y
-
-        self.detect_width = template_width
-        self.detect_height = template_height
-
-        self.detection_label.setText(
-            f"Detection: "
-            f"X: {center_x}, "
-            f"Y: {center_y}, "
-            f"Confidence: {confidence:.4f}"
-        )
-
-        # ------------------------------------------------
-        # DETECTION LOG
-        # ------------------------------------------------
-
-        self.write_log(
-            "Detection SUCCESS."
-        )
-
-        self.write_log(
-            f"Top-left -> "
-            f"X: {top_left_x}, "
-            f"Y: {top_left_y}"
-        )
-
-        self.write_log(
-            f"Bottom-right -> "
-            f"X: {bottom_right_x}, "
-            f"Y: {bottom_right_y}"
-        )
-
-        self.write_log(
-            f"Center -> "
-            f"X: {center_x}, "
-            f"Y: {center_y}"
-        )
-
-        self.write_log(
-            f"Confidence -> "
-            f"{confidence:.4f}"
-        )
-
-        self.display_image(
-            image
-        )
-
-        # ------------------------------------------------
-        # TAP
-        # ------------------------------------------------
-
-        self.write_log(
-            "--------------------------------"
-        )
-
-        self.write_log(
-            f"Sending tap -> "
-            f"X: {center_x}, Y: {center_y}"
-        )
-
-        tap_success = self.adb.tap(
-            center_x,
-            center_y,
-        )
-
-        if not tap_success:
-
-            self.write_log(
-                "ADB tap FAILED."
-            )
-
-            self.write_log(
-                "Verify will NOT run."
-            )
-
-            self.detect_tap_verify_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        self.write_log(
-            "Tap SUCCESS."
-        )
-
-        self.write_log(
-            "Waiting 500 ms before verification..."
-        )
-
-        # ------------------------------------------------
-        # WAIT THEN VERIFY
-        # ------------------------------------------------
-
+        self.template_path = Path(template_path)
+        self.detect_tap_verify_button.setEnabled(False)
         self.verify_timer_active = True
 
-        QTimer.singleShot(
-            500,
-            lambda: self.verify_detected_template(
-                template
-            ),
+        self.write_log("================================")
+        self.write_log("Detect → Tap → Verify started.")
+        self.write_log(f"Template: {self.template_path}")
+
+        success = self.action_engine.detect_tap_verify(
+            self.template_path,
+            wait_seconds=0.5,
         )
 
-    # ==================================================
-    # VERIFY DETECTED TEMPLATE
-    # ==================================================
+        image = self.action_engine.last_screenshot
+        result = self.action_engine.last_detection
 
-    def verify_detected_template(
-        self,
-        template,
-    ):
+        if image is not None:
+            self.current_image = image.copy()
+            self.clear_detection()
+            self.display_image(image)
+
+        if success:
+            self.detection_label.setText("Detection: Verify SUCCESS")
+            self.write_log("VERIFY SUCCESS.")
+        else:
+            if result is not None and result.found:
+                self.detection_label.setText(
+                    f"Detection: Verify FAILED "
+                    f"(Confidence: {result.confidence:.4f})"
+                )
+            else:
+                self.detection_label.setText("Detection: Verify FAILED")
+            self.write_log("VERIFY FAILED.")
 
         self.verify_timer_active = False
-
-        self.write_log(
-            "--------------------------------"
-        )
-
-        self.write_log(
-            "VERIFY started."
-        )
-
-        self.write_log(
-            "Taking verification screenshot..."
-        )
-
-        image = self.adb.screenshot()
-
-        if image is None:
-
-            self.write_log(
-                "Verification screenshot FAILED."
-            )
-
-            self.detection_label.setText(
-                "Detection: Verify screenshot failed"
-            )
-
-            self.detect_tap_verify_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "Detect → Tap → Verify FAILED."
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        self.current_image = image.copy()
-
-        self.clear_detection()
-
-        self.display_image(
-            image
-        )
-
-        saved_path = self.save_screenshot(
-            image
-        )
-
-        if saved_path:
-
-            self.write_log(
-                "Verification screenshot saved:"
-            )
-
-            self.write_log(
-                f"{saved_path}"
-            )
-
-        # ------------------------------------------------
-        # VERIFY MATCHING
-        # ------------------------------------------------
-
-        screen_height, screen_width = (
-            image.shape[:2]
-        )
-
-        template_height, template_width = (
-            template.shape[:2]
-        )
-
-        if (
-            template_width > screen_width
-            or template_height > screen_height
-        ):
-
-            self.write_log(
-                "Verification template is "
-                "larger than screenshot."
-            )
-
-            self.detection_label.setText(
-                "Detection: Verify error"
-            )
-
-            self.detect_tap_verify_button.setEnabled(
-                True
-            )
-
-            self.write_log(
-                "Detect → Tap → Verify FAILED."
-            )
-
-            self.write_log(
-                "================================"
-            )
-
-            return
-
-        screen_gray = cv2.cvtColor(
-            image,
-            cv2.COLOR_BGR2GRAY,
-        )
-
-        template_gray = cv2.cvtColor(
-            template,
-            cv2.COLOR_BGR2GRAY,
-        )
-
-        self.write_log(
-            "Running verification template matching..."
-        )
-
-        result = cv2.matchTemplate(
-            screen_gray,
-            template_gray,
-            cv2.TM_CCOEFF_NORMED,
-        )
-
-        min_val, max_val, min_loc, max_loc = (
-            cv2.minMaxLoc(result)
-        )
-
-        verify_confidence = float(
-            max_val
-        )
-
-        self.write_log(
-            f"Verification confidence: "
-            f"{verify_confidence:.4f}"
-        )
-
-        # ------------------------------------------------
-        # VERIFY RESULT
-        #
-        # Expected behavior:
-        # The detected template should disappear
-        # after the tap.
-        # ------------------------------------------------
-
-        if verify_confidence < self.detection_threshold:
-
-            self.detection_label.setText(
-                "Detection: Verify SUCCESS"
-            )
-
-            self.write_log(
-                "VERIFY SUCCESS."
-            )
-
-            self.write_log(
-                "Template is no longer detected "
-                "after the tap."
-            )
-
-            self.write_log(
-                f"Verification confidence "
-                f"{verify_confidence:.4f} "
-                f"< threshold "
-                f"{self.detection_threshold:.2f}"
-            )
-
-        else:
-
-            verify_x = int(
-                max_loc[0]
-                + template_width // 2
-            )
-
-            verify_y = int(
-                max_loc[1]
-                + template_height // 2
-            )
-
-            self.detection_label.setText(
-                f"Detection: Verify FAILED "
-                f"(X: {verify_x}, "
-                f"Y: {verify_y}, "
-                f"Confidence: "
-                f"{verify_confidence:.4f})"
-            )
-
-            self.write_log(
-                "VERIFY FAILED."
-            )
-
-            self.write_log(
-                "Template is still detected "
-                "after the tap."
-            )
-
-            self.write_log(
-                f"Verification confidence "
-                f"{verify_confidence:.4f} "
-                f">= threshold "
-                f"{self.detection_threshold:.2f}"
-            )
-
-        # ------------------------------------------------
-        # FINISH
-        # ------------------------------------------------
-
-        self.detect_tap_verify_button.setEnabled(
-            True
-        )
-
-        self.write_log(
-            "Detect → Tap → Verify finished."
-        )
-
-        self.write_log(
-            "================================"
-        )
-
-    # ==================================================
-    # CLEAR DETECTION
-    # ==================================================
-
+        self.detect_tap_verify_button.setEnabled(True)
+        self.write_log("Detect → Tap → Verify finished.")
+        self.write_log("================================")
     def clear_detection(self):
 
         self.detected = False
