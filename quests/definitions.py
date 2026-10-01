@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Type
+from typing import Optional, Type
 
 
 @dataclass(frozen=True)
@@ -16,7 +16,7 @@ class QuestDefinition:
     name: str
     category: str
     target: Optional[int]
-    routine_factory: Type
+    routine_factory: Optional[Type]
 
 
 def create_test_quest_definition():
@@ -31,164 +31,33 @@ def create_test_quest_definition():
     )
 
 
-# Known Daily Quest definitions collected so far.
-# The final two Daily Quest entries are intentionally not invented;
-# they will be added when their exact names/targets are known.
+# Exact Daily Quest definitions from the game UI.
 DAILY_QUEST_DEFINITIONS = (
-    QuestDefinition(
-        "use_familiar_support_skill",
-        "Use Familiar Support Skill",
-        "castle",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "claim_login_gift",
-        "Claim Login Gift",
-        "castle",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "open_free_mall_chests",
-        "Open free Mall Chests",
-        "castle",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "shelter_troops",
-        "Shelter troops",
-        "castle",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "use_emotes",
-        "Use Emotes",
-        "castle",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "get_hero_medals",
-        "Get Hero Medals from Hero Stages",
-        "hero",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "construct_or_upgrade_buildings",
-        "Construct or upgrade buildings",
-        "castle",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "research_technology",
-        "Research technology",
-        "castle",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "make_cargo_ship_trades",
-        "Make Cargo Ship trades",
-        "castle",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "send_guild_help",
-        "Send Guild Help",
-        "guild",
-        5,
-        None,
-    ),
-    QuestDefinition(
-        "spend_holy_stars_labyrinth",
-        "Spend Holy Stars in the Labyrinth",
-        "labyrinth",
-        100,
-        None,
-    ),
-    QuestDefinition(
-        "use_resource_bag_items",
-        "Use Resource-tab Bag items",
-        "bag",
-        5,
-        None,
-    ),
-    QuestDefinition(
-        "use_speed_up_bag_items",
-        "Use Speed Up-tab Bag items",
-        "bag",
-        2,
-        None,
-    ),
-    QuestDefinition(
-        "get_dark_essences",
-        "Get Dark Essences by raiding Darknests on Kingdom Map",
-        "world",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "spend_energy_hunting_monsters",
-        "Spend Energy hunting Monsters on Kingdom Map",
-        "world",
-        18000,
-        None,
-    ),
-    QuestDefinition(
-        "spend_sta_hero_stages",
-        "Spend STA in Hero Stages",
-        "hero",
-        160,
-        None,
-    ),
-    QuestDefinition(
-        "battle_hero_colosseum",
-        "Battle in Hero Colosseum",
-        "hero",
-        1,
-        None,
-    ),
-    QuestDefinition(
-        "train_troops",
-        "Train troops in Barracks",
-        "castle",
-        800,
-        None,
-    ),
-    QuestDefinition(
-        "heal_wounded_troops",
-        "Heal wounded troops in Infirmary",
-        "castle",
-        50,
-        None,
-    ),
-    QuestDefinition(
-        "gather_food",
-        "Gather Food from Fields on Kingdom Map",
-        "world",
-        100000,
-        None,
-    ),
-    QuestDefinition(
-        "gather_stones",
-        "Gather Stones from Rocks on Kingdom Map",
-        "world",
-        100000,
-        None,
-    ),
-    QuestDefinition(
-        "gather_timber",
-        "Gather Timber from Woods on Kingdom Map",
-        "world",
-        None,
-        None,
-    ),
+    QuestDefinition("use_familiar_support_skill", "Use Familiar Support Skill", "castle", 1, None),
+    QuestDefinition("claim_login_gift", "Claim Login Gift", "castle", 1, None),
+    QuestDefinition("open_free_mall_chests", "Open free Mall Chests", "castle", 1, None),
+    QuestDefinition("shelter_troops", "Shelter troops", "castle", 1, None),
+    QuestDefinition("use_emotes", "Use Emotes", "castle", 1, None),
+    QuestDefinition("get_hero_medas_from_hero_stages", "Get Hero Medas from Hero Stages", "hero", 1, None),
+    QuestDefinition("construct_or_upgrade_buildings", "Construct or upgrade buildings", "castle", 1, None),
+    QuestDefinition("research_technology", "Research technology", "castle", 1, None),
+    QuestDefinition("make_cargo_ship_trades", "Make Cargo Ship trades", "castle", 1, None),
+    QuestDefinition("send_guild_help", "Send Guild Help", "guild", 5, None),
+    QuestDefinition("spend_holy_stars_labyrinth", "Spend Holy Stars in the Labyrinth", "labyrinth", 100, None),
+    QuestDefinition("use_resource_tab_bag_items", "Use items that are classified under the Resource tab in the Bag", "bag", 5, None),
+    QuestDefinition("use_speed_up_tab_bag_items", "Use items that are classified under the Speed Up tab in the Bag", "bag", 2, None),
+    QuestDefinition("get_dark_essences_darknests", "Get Dark Essences by raiding Darknests on the Kingdom Map", "world", 1, None),
+    QuestDefinition("spend_energy_hunting_monsters", "Spend Energy by hunting Monsters on the Kingdom Map", "world", 18000, None),
+    QuestDefinition("spend_sta_hero_stages", "Spend STA in Hero Stages", "hero", 160, None),
+    QuestDefinition("battle_hero_colosseum", "Battle in the Hero Colosseum", "hero", 1, None),
+    QuestDefinition("train_troops_barracks", "Train troops in the Barracks", "castle", 800, None),
+    QuestDefinition("heal_wounded_troops_infirmary", "Heal wounded troops in the Infirmary", "castle", 50, None),
+    QuestDefinition("gather_food", "Gather Food from Fields on the Kingdom Map", "world", 100000, None),
+    QuestDefinition("gather_stones", "Gather Stones from Rocks on the Kingdom Map", "world", 100000, None),
+    QuestDefinition("gather_timber", "Gather Timber from Woods on the Kingdom Map", "world", 100000, None),
+    QuestDefinition("gather_ore", "Gather Ore from Rich Veins on the Kingdom Map", "world", 100000, None),
+    QuestDefinition("gather_gold", "Gather Gold from Ruins on the Kingdom Map", "world", 35000, None),
+    QuestDefinition("use_luck_tokens_kingdom_tycoon", "Use Luck Tokens in Kingdom Tycoon", "tycoon", 1, None),
 )
 
 
@@ -197,5 +66,5 @@ QUEST_DEFINITIONS = {
     for definition in DAILY_QUEST_DEFINITIONS
 }
 
-
+# Development-only definition; not part of the 25 Daily Quests.
 QUEST_DEFINITIONS["test_quest"] = create_test_quest_definition()
