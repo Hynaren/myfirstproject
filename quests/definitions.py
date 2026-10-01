@@ -33,7 +33,7 @@ def create_test_quest_definition():
 
 # Exact Daily Quest definitions from the game UI.
 DAILY_QUEST_DEFINITIONS = (
-    QuestDefinition("use_familiar_support_skill", "Use Familiar Support Skill", "castle", 1, None),
+    QuestDefinition(\n        "use_familiar_support_skill",\n        "Use Familiar Support Skill",\n        "castle",\n        1,\n        __import__("quests.routines.use_familiar_support_skill", fromlist=["UseFamiliarSupportSkillRoutine"]).UseFamiliarSupportSkillRoutine,\n    ),
     QuestDefinition("claim_login_gift", "Claim Login Gift", "castle", 1, None),
     QuestDefinition("open_free_mall_chests", "Open free Mall Chests", "castle", 1, None),
     QuestDefinition("shelter_troops", "Shelter troops", "castle", 1, None),
