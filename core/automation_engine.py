@@ -85,6 +85,7 @@ class AutomationEngine:
             action_engine=self.action_engine,
             game_state=self.game_state,
             logger=self.log,
+            popup_manager=self.popup_manager,
         )
 
         result = self.quest_manager.run_quest(
