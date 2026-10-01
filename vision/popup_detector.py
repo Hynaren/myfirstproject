@@ -40,6 +40,16 @@ class PurchasePopupVision:
     SCREEN_WIDTH = 960
     SCREEN_HEIGHT = 540
 
+    # Most game popups place the X in the upper-right corner.
+    # Use this fast path first, then fall back to the full screen
+    # for the smaller number of popups whose X appears elsewhere.
+    GLOBAL_CLOSE_PRIMARY_ROI = (
+        780,
+        0,
+        SCREEN_WIDTH,
+        180,
+    )
+
     GLOBAL_CLOSE_BUTTON_ROI = (
         0,
         0,
@@ -191,6 +201,29 @@ class PurchasePopupVision:
             "Detecting GLOBAL close button..."
         )
 
+        # Fast path: the X is normally in the upper-right.
+        result = self.detector.detect(
+            image=image,
+            template_path=self.close_button_template,
+            roi=self.GLOBAL_CLOSE_PRIMARY_ROI,
+        )
+
+        if result.found:
+            self.log(
+                "[PurchasePopupVision] "
+                f"GLOBAL close button FOUND in primary ROI "
+                f"center={result.center} "
+                f"confidence={result.confidence:.4f}"
+            )
+            return result
+
+        # Fallback: some popups place the X elsewhere.
+        self.log(
+            "[PurchasePopupVision] "
+            "GLOBAL close button not found in primary ROI; "
+            "scanning full screen..."
+        )
+
         result = self.detector.detect(
             image=image,
             template_path=self.close_button_template,
@@ -200,7 +233,7 @@ class PurchasePopupVision:
         if result.found:
             self.log(
                 "[PurchasePopupVision] "
-                f"GLOBAL close button FOUND "
+                f"GLOBAL close button FOUND in full screen "
                 f"center={result.center} "
                 f"confidence={result.confidence:.4f}"
             )
