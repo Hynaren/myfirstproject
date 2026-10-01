@@ -69,6 +69,9 @@ class PopupManager:
             logger=self.log,
         )
 
+        # Popup close buttons are small, so use tighter jitter.
+        self.popup_tap_jitter = 2
+
     # ---------------------------------------------------------
     # Logging
     # ---------------------------------------------------------
@@ -166,7 +169,11 @@ class PopupManager:
             f"Closing purchase popup at ({x}, {y})"
         )
 
-        if not self.action_engine.tap(\n            x,\n            y,\n            jitter=self.popup_tap_jitter,\n        ):
+        if not self.action_engine.tap(
+            x,
+            y,
+            jitter=self.popup_tap_jitter,
+        ):
             self.log(
                 "[PopupManager] "
                 "Close button TAP FAILED"
@@ -288,7 +295,11 @@ class PopupManager:
             f"Closing generic popup at ({x}, {y})"
         )
 
-        if not self.action_engine.tap(x, y):
+        if not self.action_engine.tap(
+            x,
+            y,
+            jitter=self.popup_tap_jitter,
+        ):
             self.log(
                 "[PopupManager] "
                 "GLOBAL close button TAP FAILED"
