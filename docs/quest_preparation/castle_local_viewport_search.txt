@@ -1,0 +1,215 @@
+LORDS MOBILE TOOL
+Castle Local Viewport Search — Preparation Spec
+===============================================
+
+Purpose
+-------
+This document records the agreed game-logic preparation for future Daily Quests
+that need to locate buildings or interact with troop-related buildings in Castle,
+especially:
+
+- Train Troops
+- Heal Wounded Troops
+- Future quests that need a specific Castle building
+
+This is a design/specification note, not implementation code.
+
+
+1. Castle Map Search Model
+--------------------------
+The Castle interface does NOT require full-map exploration.
+
+The Castle view is mainly a fixed working area around the stronghold.
+Buildings are arranged in available expansion spaces, so the useful interaction
+area is limited.
+
+When the game is opened, the Castle interface normally starts around the center
+of the stronghold.
+
+Therefore, future building search should use a SMALL LOCAL VIEWPORT SEARCH,
+not a full-map exploration algorithm.
+
+
+2. Starting Position
+--------------------
+Assumption:
+
+    Castle opened -> viewport starts near CENTER of the stronghold.
+
+The search system should treat this as the known starting state:
+
+    CENTER
+
+The first action is always to scan the current viewport before swiping.
+
+
+3. Local Swipe Search
+---------------------
+If the target building is not visible, the navigation layer can move the
+viewport by a limited distance.
+
+Allowed directions:
+
+    LEFT
+    RIGHT
+    UP
+    DOWN
+
+The movement range should remain small and bounded.
+
+The exact swipe distance and overlap are NOT finalized yet. They will be
+determined from real LDPlayer screenshots/live testing.
+
+
+4. Initial Search Pattern
+-------------------------
+A deterministic search pattern is preferred over random exploration.
+
+Initial conceptual pattern:
+
+    CENTER
+      -> LEFT
+      -> CENTER
+      -> RIGHT
+      -> CENTER
+      -> UP
+      -> CENTER
+      -> DOWN
+      -> CENTER
+
+At every position:
+
+    1. Screenshot
+    2. Scan for target building
+    3. If found -> stop search and return target position
+    4. If not found -> continue to next bounded viewport
+
+The exact ordering can be refined after real screenshots are analyzed.
+
+
+5. Why This Is Important
+------------------------
+Quest routines should NOT contain hardcoded swipe sequences.
+
+For example, Train Troops should not know how to swipe around Castle.
+
+Instead:
+
+    Quest Routine
+        |
+        v
+    Castle Navigation
+        |
+        v
+    Local Viewport Search
+        |
+        v
+    Vision / Detector
+        |
+        v
+    ActionEngine
+        |
+        v
+    ADB
+
+The quest should conceptually request:
+
+    "Find the Barracks."
+
+The navigation/search layer decides how to locate it.
+
+
+6. Viewport Verification
+------------------------
+Every swipe should eventually be followed by a screenshot.
+
+If needed, the system can verify that the viewport actually changed before
+continuing. This prevents wasted searches when a swipe reaches a boundary or
+does not move the map as expected.
+
+Animation/wait time must be included between swipe and screenshot.
+
+
+7. Search Bounds / Safety
+-------------------------
+The search MUST be bounded.
+
+Requirements:
+
+- No infinite swiping.
+- No uncontrolled exploration.
+- No assumption that the whole Castle map must be searched.
+- Stop immediately when the target is found.
+- Return failure cleanly when the local search area is exhausted.
+
+This keeps future quest execution predictable and fast.
+
+
+8. Reusable Navigation Capability
+---------------------------------
+This mechanism should become a reusable capability of CastleNavigation
+(or a dedicated local screen-search helper).
+
+Potential conceptual API:
+
+    find_building(target)
+
+Possible future responsibilities:
+
+- move from known Castle center
+- scan current viewport
+- perform bounded directional swipes
+- detect target building
+- return target location / current viewport state
+- optionally return to center when the quest is finished
+
+The final API will be decided during implementation.
+
+
+9. Relation to Future Quests
+----------------------------
+This preparation is intended to support quests such as:
+
+- Train Troops in Barracks
+- Heal Wounded Troops in Infirmary
+- Construct or Upgrade Buildings
+- Research Technology
+- Other Castle-based interactions
+
+For troop quests in particular, the likely flow is:
+
+    Open/enter Castle
+        -> ensure local Castle viewport
+        -> find Barracks / Infirmary
+        -> tap building
+        -> perform quest-specific action
+        -> verify result/state
+        -> handle any popup through PopupManager
+
+
+10. Current Status
+------------------
+STATUS: DESIGN / PREPARATION ONLY
+
+Not implemented yet.
+
+Still required before implementation:
+
+- real Castle screenshots from LDPlayer
+- determine actual local search area
+- determine safe swipe distance
+- determine useful viewport overlap
+- identify reliable visual anchors/templates for target buildings
+- decide whether center restoration is required after each quest
+- live-test the search on multiple Castle layouts/accounts
+
+
+11. Important Design Principle
+------------------------------
+Castle navigation is a LOCAL deterministic search problem.
+
+Do not turn it into a general full-map exploration system unless later
+evidence from the game requires that.
+
+The goal is simple, bounded, reusable navigation that future quests can call
+without knowing the swipe mechanics themselves.
