@@ -4,7 +4,7 @@ from core.quest_manager import QuestManager
 from navigation.castle_navigation import CastleNavigation
 from navigation.world_navigation import WorldNavigation
 from quests.routines.test_quest import TestQuestRoutine
-
+from core.popup_manager import PopupManager
 
 class AutomationEngine:
 
@@ -24,6 +24,15 @@ class AutomationEngine:
 
         self.action_engine = ActionEngine(
             adb=self.adb,
+            logger=self.log,
+        )
+
+        # ---------------------------------------------------------
+        # Popup Manager
+        # ---------------------------------------------------------
+
+        self.popup_manager = PopupManager(
+            action_engine=self.action_engine,
             logger=self.log,
         )
 
@@ -90,6 +99,31 @@ class AutomationEngine:
             self.log(
                 "[AutomationEngine] "
                 "Test Quest FAILED"
+            )
+
+        return result
+
+    # ---------------------------------------------------------
+    # Purchase Popup
+    # ---------------------------------------------------------
+
+    def handle_purchase_popup(self):
+        self.log(
+            "[AutomationEngine] "
+            "Checking purchase popup"
+        )
+
+        result = self.popup_manager.handle_purchase_popup()
+
+        if result:
+            self.log(
+                "[AutomationEngine] "
+                "Purchase popup HANDLED"
+            )
+        else:
+            self.log(
+                "[AutomationEngine] "
+                "No purchase popup handled"
             )
 
         return result
