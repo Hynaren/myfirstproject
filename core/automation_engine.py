@@ -81,11 +81,19 @@ class AutomationEngine:
             "Starting Test Quest"
         )
 
+        popup_result = self.handle_popups()
+
+        if popup_result == PopupResult.FAILED:
+            self.log(
+                "[AutomationEngine] "
+                "Test Quest blocked by popup safety"
+            )
+            return False
+
         routine = TestQuestRoutine(
             action_engine=self.action_engine,
             game_state=self.game_state,
             logger=self.log,
-            popup_manager=self.popup_manager,
         )
 
         result = self.quest_manager.run_quest(
