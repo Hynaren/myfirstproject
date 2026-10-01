@@ -1,0 +1,94 @@
+# Daily Quest #1 — Use Familiar Support Skill
+
+## Goal
+
+Complete the Daily Quest by using one Familiar Support Skill.
+The quest target is only 1 use, so the routine stops after one successful claim.
+
+## Confirmed game flow
+
+1. Detect the Familiar icon (dragon head) at the edge of the castle screen.
+2. Tap the Familiar icon.
+3. Wait briefly for the Familiar skill panel/list to open.
+4. The desired skill may not be visible immediately.
+5. Swipe the Familiar skill list upward so lower skills become visible.
+6. Detect the claimable USE + ! visual state.
+7. If the target is found, tap it.
+8. Verify the skill changed from the claimable state to the post-use/cooldown state.
+9. Quest is complete after one successful use.
+
+## Vision strategy
+
+The routine should not depend on:
+- a fixed number of Familiar skills;
+- a fixed skill index;
+- a fixed account research level;
+- OCR of the countdown;
+- hardcoded coordinates for the skill;
+- assumptions that the target is visible before scrolling.
+
+The primary target is the distinctive USE + ! state.
+
+Two visual states are expected to be useful as templates:
+- Claimable state: USE + !
+- Post-use state: disabled/dimmed skill with its cooldown visible underneath
+
+The exact templates and coordinates/ROIs must be created from real LDPlayer screenshots. Do not invent them.
+
+## Scrolling strategy
+
+The Familiar panel requires a swipe to expose the relevant skill.
+The routine should:
+- scan before swiping when practical;
+- swipe the skill list;
+- scan again;
+- repeat only within a bounded number of swipes;
+- stop immediately when the claimable target is found.
+
+The swipe itself should use the reusable ActionEngine action rather than direct ADB calls inside the quest routine.
+The exact swipe start/end coordinates should be determined from a real screenshot.
+
+## Success / verification
+
+Success means:
+- the claimable USE + ! target was detected;
+- the target was tapped successfully;
+- the claimable visual state is no longer present and/or the post-use/cooldown state is detected.
+
+The routine does not need to calculate or interpret the cooldown duration.
+
+## Architecture
+
+Expected flow:
+AutomationEngine
+→ QuestManager
+→ UseFamiliarSupportSkillRoutine
+→ ActionEngine
+→ Detector / Vision
+→ ADB
+
+Global popup safety remains owned by AutomationEngine / PopupManager; do not duplicate global popup handling inside this quest routine.
+
+## Current implementation status
+
+- QuestDefinition is wired to UseFamiliarSupportSkillRoutine.
+- Unit tests for the routine pass.
+- Real Familiar templates have not been created yet.
+- Live LDPlayer Vision testing has not been completed yet.
+- The current routine intentionally fails safely when the real template is missing.
+
+## Next implementation step
+
+When real LDPlayer screenshots are available:
+1. Identify the Familiar icon.
+2. Identify the exact Familiar panel/list ROI.
+3. Determine the required swipe gesture.
+4. Capture the USE + ! template.
+5. Capture the post-use/cooldown verification template.
+6. Implement bounded swipe + detect loop.
+7. Live-test on LDPlayer.
+8. Commit the completed Quest #1 implementation and update this document with any final parameters.
+
+## Design rule
+
+This document is the source of truth for the agreed Quest #1 workflow. If implementation details are uncertain, inspect this file before making assumptions. Update it whenever the agreed quest structure changes.
