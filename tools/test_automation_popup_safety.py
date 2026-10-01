@@ -7,8 +7,13 @@ Safety Layer without requiring a live LDPlayer instance.
 Live popup/Vision behavior remains covered by the existing popup tests.
 """
 
+import sys
+from pathlib import Path
 import unittest
 from unittest.mock import Mock
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.automation_engine import AutomationEngine
 from core.popup_manager import PopupResult
