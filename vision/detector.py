@@ -29,6 +29,12 @@ class Detector:
 
     Detector only handles image recognition.
     It does NOT talk to ADB and does NOT perform taps.
+
+    Supports optional ROI:
+        roi = (x1, y1, x2, y2)
+
+    Detection coordinates are always returned
+    in full-screen coordinates.
     """
 
     def __init__(self, threshold=0.80, logger=None):
@@ -47,7 +53,7 @@ class Detector:
     # Detect
     # ---------------------------------------------------------
 
-    def detect(self, image, template_path):
+    def detect(self, image, template_path, roi=None):
         if image is None:
             self.log("[Detector] Input image is None.")
             return DetectionResult(found=False)
@@ -81,8 +87,64 @@ class Detector:
             self.log("[Detector] Template is larger than screen.")
             return DetectionResult(found=False)
 
+        # -----------------------------------------------------
+        # Prepare search image
+        # -----------------------------------------------------
+
+        search_image = image
+        offset_x = 0
+        offset_y = 0
+
+        if roi is not None:
+            if len(roi) != 4:
+                self.log(
+                    "[Detector] Invalid ROI. "
+                    "Expected (x1, y1, x2, y2)."
+                )
+                return DetectionResult(found=False)
+
+            x1, y1, x2, y2 = map(int, roi)
+
+            # Clamp ROI to screen boundaries.
+            x1 = max(0, min(x1, screen_width))
+            y1 = max(0, min(y1, screen_height))
+            x2 = max(0, min(x2, screen_width))
+            y2 = max(0, min(y2, screen_height))
+
+            if x2 <= x1 or y2 <= y1:
+                self.log(
+                    "[Detector] Invalid ROI dimensions."
+                )
+                return DetectionResult(found=False)
+
+            roi_width = x2 - x1
+            roi_height = y2 - y1
+
+            if (
+                template_width > roi_width
+                or template_height > roi_height
+            ):
+                self.log(
+                    "[Detector] Template is larger than ROI."
+                )
+                return DetectionResult(found=False)
+
+            search_image = image[y1:y2, x1:x2]
+
+            offset_x = x1
+            offset_y = y1
+
+            self.log(
+                f"[Detector] ROI: "
+                f"({x1}, {y1}) → ({x2}, {y2})"
+            )
+
+        # -----------------------------------------------------
+        # Grayscale matching
+        # -----------------------------------------------------
+
         screen_gray = cv2.cvtColor(
-            image,
+            search_image,
             cv2.COLOR_BGR2GRAY,
         )
 
@@ -101,8 +163,13 @@ class Detector:
 
         confidence = float(max_val)
 
-        top_left_x = int(max_loc[0])
-        top_left_y = int(max_loc[1])
+        # max_loc is relative to search_image / ROI.
+        local_x = int(max_loc[0])
+        local_y = int(max_loc[1])
+
+        # Convert back to full-screen coordinates.
+        top_left_x = local_x + offset_x
+        top_left_y = local_y + offset_y
 
         center_x = (
             top_left_x
