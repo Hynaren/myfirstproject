@@ -1,3 +1,4 @@
+import random
 import time
 
 from vision.detector import Detector
@@ -13,7 +14,18 @@ class ActionEngine:
 
     Quest routines should use ActionEngine instead
     of directly using ADB or OpenCV.
+
+    Tap coordinates passed to ActionEngine are logical target
+    coordinates. The final ADB tap receives a small randomized
+    offset so repeated automation taps do not always hit the
+    exact same pixel.
     """
+
+    SCREEN_WIDTH = 960
+    SCREEN_HEIGHT = 540
+
+    # Default jitter for normal automation taps.
+    DEFAULT_TAP_JITTER = 4
 
     def __init__(self, adb, logger=None):
         self.adb = adb
@@ -37,15 +49,68 @@ class ActionEngine:
             self.logger(message)
 
     # ---------------------------------------------------------
+    # Tap randomization
+    # ---------------------------------------------------------
+
+    def _randomize_tap_point(self, x, y, jitter):
+        """
+        Apply a small random offset to a logical tap point.
+
+        The result is clamped to the 960x540 LDPlayer screen.
+        When jitter is enabled, (0, 0) is avoided so the tap
+        actually moves away from the requested coordinate.
+        """
+
+        x = int(x)
+        y = int(y)
+        jitter = max(0, int(jitter))
+
+        if jitter == 0:
+            return x, y
+
+        while True:
+            dx = random.randint(-jitter, jitter)
+            dy = random.randint(-jitter, jitter)
+
+            if dx != 0 or dy != 0:
+                break
+
+        actual_x = max(0, min(self.SCREEN_WIDTH - 1, x + dx))
+        actual_y = max(0, min(self.SCREEN_HEIGHT - 1, y + dy))
+
+        return actual_x, actual_y
+
+    # ---------------------------------------------------------
     # Basic actions
     # ---------------------------------------------------------
 
-    def tap(self, x, y):
-        self.log(
-            f"[ActionEngine] TAP ({x}, {y})"
+    def tap(self, x, y, jitter=None):
+        """
+        Tap a logical coordinate using a randomized final point.
+
+        Args:
+            x, y: logical target coordinate.
+            jitter: maximum pixel offset in each axis.
+                    None uses DEFAULT_TAP_JITTER.
+                    0 disables randomization.
+        """
+
+        if jitter is None:
+            jitter = self.DEFAULT_TAP_JITTER
+
+        actual_x, actual_y = self._randomize_tap_point(
+            x,
+            y,
+            jitter,
         )
 
-        success = self.adb.tap(x, y)
+        self.log(
+            f"[ActionEngine] TAP requested=({x}, {y}) "
+            f"actual=({actual_x}, {actual_y}) "
+            f"jitter={jitter}"
+        )
+
+        success = self.adb.tap(actual_x, actual_y)
 
         if success:
             self.log(
