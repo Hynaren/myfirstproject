@@ -6,7 +6,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from adb.controller import ADBController
 from core.action_engine import ActionEngine
-from core.popup_manager import PopupManager
+from core.popup_manager import PopupManager, PopupResult
 
 
 def log(message):
@@ -41,15 +41,19 @@ def main():
     print()
     print("[PopupManager] Handling purchase popup...")
 
-    result = popup_manager.handle_purchase_popup()
+    result = popup_manager.handle_popups()
 
     print()
     print("-" * 60)
 
-    if result:
-        print("[RESULT] PURCHASE POPUP HANDLED SUCCESSFULLY")
+    if result == PopupResult.HANDLED:
+        print("[RESULT] POPUP SAFETY HANDLED SUCCESSFULLY")
+    elif result == PopupResult.NOT_FOUND:
+        print("[RESULT] NO POPUP DETECTED — PASS")
+    elif result == PopupResult.FAILED:
+        print("[RESULT] POPUP SAFETY FAILED")
     else:
-        print("[RESULT] PURCHASE POPUP NOT HANDLED")
+        print(f"[RESULT] UNKNOWN POPUP RESULT: {result.value}")
 
     print("-" * 60)
 
