@@ -1,16 +1,19 @@
 LORDS MOBILE TOOL
-Castle Local Viewport Search — Preparation Spec
-===============================================
+Castle + World Map Navigation Preparation Spec
+==============================================
 
 Purpose
 -------
 This document records the agreed game-logic preparation for future Daily Quests
-that need to locate buildings or interact with troop-related buildings in Castle,
-especially:
+that need to locate buildings or navigate between Castle and World Map.
 
+Primary future examples:
 - Train Troops
 - Heal Wounded Troops
-- Future quests that need a specific Castle building
+- Gather resources
+- Hunt monsters
+- Darknest-related actions
+- Other World Map activities
 
 This is a design/specification note, not implementation code.
 
@@ -30,8 +33,8 @@ Therefore, future building search should use a SMALL LOCAL VIEWPORT SEARCH,
 not a full-map exploration algorithm.
 
 
-2. Starting Position
---------------------
+2. Castle Starting Position
+---------------------------
 Assumption:
 
     Castle opened -> viewport starts near CENTER of the stronghold.
@@ -43,8 +46,8 @@ The search system should treat this as the known starting state:
 The first action is always to scan the current viewport before swiping.
 
 
-3. Local Swipe Search
----------------------
+3. Castle Local Swipe Search
+----------------------------
 If the target building is not visible, the navigation layer can move the
 viewport by a limited distance.
 
@@ -61,8 +64,8 @@ The exact swipe distance and overlap are NOT finalized yet. They will be
 determined from real LDPlayer screenshots/live testing.
 
 
-4. Initial Search Pattern
--------------------------
+4. Initial Castle Search Pattern
+--------------------------------
 A deterministic search pattern is preferred over random exploration.
 
 Initial conceptual pattern:
@@ -87,18 +90,107 @@ At every position:
 The exact ordering can be refined after real screenshots are analyzed.
 
 
-5. Why This Is Important
-------------------------
-Quest routines should NOT contain hardcoded swipe sequences.
+5. World Map Is Different
+-------------------------
+World Map navigation is fundamentally different from Castle navigation.
 
-For example, Train Troops should not know how to swipe around Castle.
+The World Map can require a VERY LARGE swipe range / movement area.
 
-Instead:
+We should NOT assume that World Map can be searched with the small local
+viewport strategy used by Castle.
+
+However, World Map has an important recovery/navigation advantage:
+
+    The game uses map COORDINATES.
+
+The current World Map position can therefore be represented by coordinates,
+which gives us a deterministic spatial reference.
+
+
+6. Player Castle Re-Center / Recovery
+-------------------------------------
+The World Map also provides an on-screen icon that indicates when our own
+Castle is not currently visible in the active map viewport.
+
+That icon can be pressed to target / re-center the map on our own Castle.
+
+Therefore:
+
+    World Map viewport moved far away
+            |
+            v
+    Own Castle not visible
+            |
+            v
+    Press "own Castle" locator icon
+            |
+            v
+    Game targets the correct Castle
+            |
+            v
+    Navigation regains a known reference position
+
+This means World Map navigation does not need to fear permanently losing the
+Castle through large swipes, provided the locator icon remains available and
+reliable.
+
+
+7. World Map Navigation Model
+-----------------------------
+The World Map should therefore be treated as a COORDINATE-BASED navigation
+system with a built-in Castle recovery mechanism.
+
+Conceptual model:
+
+    Known coordinates
+          |
+          v
+    Navigate / swipe toward target area
+          |
+          v
+    Target resource / monster / Darknest / location
+          |
+          v
+    Perform quest action
+          |
+          v
+    Use coordinates or own-Castle locator to recover position when needed
+
+Large movement is acceptable on World Map because the map has a persistent
+coordinate reference and a direct way to return to our Castle.
+
+
+8. Important Difference Between Castle and World Map
+-----------------------------------------------------
+Castle:
+
+    - Local viewport
+    - Starts near known CENTER
+    - Small bounded swipes
+    - Building search
+    - No need for full-map exploration
+
+World Map:
+
+    - Potentially very large movement
+    - Coordinate-based positioning
+    - Large swipe/navigation range may be required
+    - Own-Castle locator icon provides recovery/re-centering
+    - Suitable for distant targets and large-area navigation
+
+Do NOT force both interfaces into one identical search algorithm.
+
+
+9. Architecture Implication
+----------------------------
+Quest routines should NOT contain hardcoded swipe mechanics.
+
+For Castle:
 
     Quest Routine
         |
         v
-    Castle Navigation
+    CastleNavigation
         |
         v
     Local Viewport Search
@@ -112,71 +204,102 @@ Instead:
         v
     ADB
 
-The quest should conceptually request:
+For World Map:
 
-    "Find the Barracks."
+    Quest Routine
+        |
+        v
+    WorldNavigation
+        |
+        v
+    Coordinate / Large-Area Navigation
+        |
+        v
+    Vision + Map State
+        |
+        v
+    ActionEngine
+        |
+        v
+    ADB
 
-The navigation/search layer decides how to locate it.
+The quest should express the goal, while the navigation layer handles the
+movement mechanics.
 
 
-6. Viewport Verification
-------------------------
-Every swipe should eventually be followed by a screenshot.
+10. Viewport / Movement Verification
+------------------------------------
+After a swipe or navigation action, the system should obtain a screenshot.
 
-If needed, the system can verify that the viewport actually changed before
-continuing. This prevents wasted searches when a swipe reaches a boundary or
-does not move the map as expected.
+For Castle:
+- verify the viewport changed when necessary
+- wait for map animation to finish
+- scan the new viewport
 
-Animation/wait time must be included between swipe and screenshot.
+For World Map:
+- verify the map moved toward the intended area when necessary
+- use coordinates as the primary spatial reference
+- use the own-Castle locator as a recovery mechanism when appropriate
+
+Exact verification logic will be determined during live testing.
 
 
-7. Search Bounds / Safety
--------------------------
-The search MUST be bounded.
-
-Requirements:
+11. Safety / Bounds
+-------------------
+Castle search MUST be bounded:
 
 - No infinite swiping.
 - No uncontrolled exploration.
-- No assumption that the whole Castle map must be searched.
-- Stop immediately when the target is found.
-- Return failure cleanly when the local search area is exhausted.
+- Stop immediately when target is found.
+- Return failure when the local search area is exhausted.
 
-This keeps future quest execution predictable and fast.
+World Map movement can be much larger, but should still be controlled by
+coordinates / target state rather than blind unlimited swiping.
+
+The own-Castle locator should be treated as a safety/recovery capability, not
+as a reason to allow uncontrolled movement.
 
 
-8. Reusable Navigation Capability
----------------------------------
-This mechanism should become a reusable capability of CastleNavigation
-(or a dedicated local screen-search helper).
-
-Potential conceptual API:
+12. Reusable Navigation Capabilities
+-------------------------------------
+CastleNavigation should eventually provide capabilities such as:
 
     find_building(target)
 
-Possible future responsibilities:
+WorldNavigation should eventually provide capabilities such as:
 
-- move from known Castle center
-- scan current viewport
-- perform bounded directional swipes
-- detect target building
-- return target location / current viewport state
-- optionally return to center when the quest is finished
+    navigate_to_coordinates(x, y)
+    return_to_own_castle()
 
-The final API will be decided during implementation.
+The exact APIs will be decided during implementation.
+
+Potential future World Map responsibilities:
+
+- coordinate-based movement
+- large-area navigation
+- target-area acquisition
+- own-Castle recovery
+- resource / monster / Darknest positioning
 
 
-9. Relation to Future Quests
-----------------------------
+13. Relation to Future Quests
+-----------------------------
 This preparation is intended to support quests such as:
 
+Castle:
 - Train Troops in Barracks
 - Heal Wounded Troops in Infirmary
 - Construct or Upgrade Buildings
 - Research Technology
 - Other Castle-based interactions
 
-For troop quests in particular, the likely flow is:
+World Map:
+- Gather Food / Stone / Timber
+- Hunt Monsters
+- Raid Darknests
+- Other map-based activities
+
+Troop quest example:
 
     Open/enter Castle
         -> ensure local Castle viewport
@@ -187,7 +310,7 @@ For troop quests in particular, the likely flow is:
         -> handle any popup through PopupManager
 
 
-10. Current Status
+14. Current Status
 ------------------
 STATUS: DESIGN / PREPARATION ONLY
 
@@ -195,21 +318,33 @@ Not implemented yet.
 
 Still required before implementation:
 
+Castle:
 - real Castle screenshots from LDPlayer
-- determine actual local search area
+- determine local search area
 - determine safe swipe distance
 - determine useful viewport overlap
-- identify reliable visual anchors/templates for target buildings
-- decide whether center restoration is required after each quest
-- live-test the search on multiple Castle layouts/accounts
+- identify reliable building visual anchors/templates
+- decide whether center restoration is required
+
+World Map:
+- capture screenshots showing coordinates
+- identify the own-Castle locator icon
+- verify how the locator behaves in different map positions
+- determine coordinate-to-screen/navigation behavior
+- live-test large movement and recovery
 
 
-11. Important Design Principle
+15. Important Design Principle
 ------------------------------
 Castle navigation is a LOCAL deterministic search problem.
 
-Do not turn it into a general full-map exploration system unless later
-evidence from the game requires that.
+World Map navigation is a COORDINATE-BASED LARGE-AREA navigation problem with
+an OWN-CASTLE RECOVERY mechanism.
+
+Keep these as two different navigation strategies.
+
+Do not turn Castle into a full-map exploration system, and do not reduce
+World Map navigation to the same small local swipe pattern.
 
 The goal is simple, bounded, reusable navigation that future quests can call
-without knowing the swipe mechanics themselves.
+without knowing the underlying swipe mechanics themselves.
