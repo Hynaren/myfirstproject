@@ -166,7 +166,7 @@ class PopupManager:
             f"Closing purchase popup at ({x}, {y})"
         )
 
-        if not self.action_engine.tap(x, y):
+        if not self.action_engine.tap(\n            x,\n            y,\n            jitter=self.popup_tap_jitter,\n        ):
             self.log(
                 "[PopupManager] "
                 "Close button TAP FAILED"
