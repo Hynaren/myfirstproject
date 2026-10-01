@@ -18,6 +18,15 @@ class PurchasePopupVision:
         460,
     )
 
+    # Close button is located in the upper-right area
+    # of the purchase popup.
+    CLOSE_BUTTON_ROI = (
+        650,
+        0,
+        1080,
+        400,
+    )
+
     def __init__(self, detector=None, logger=None):
         self.logger = logger
 
@@ -35,6 +44,13 @@ class PurchasePopupVision:
             / "assets"
             / "popups"
             / "purchase_gem.png"
+        )
+
+        self.close_button_template = (
+            project_root
+            / "assets"
+            / "popups"
+            / "close_button.png"
         )
 
     # ---------------------------------------------------------
@@ -80,6 +96,45 @@ class PurchasePopupVision:
             self.log(
                 "[PurchasePopupVision] "
                 f"Purchase gem NOT FOUND "
+                f"confidence={result.confidence:.4f}"
+            )
+
+        return result
+
+    # ---------------------------------------------------------
+    # Close Button
+    # ---------------------------------------------------------
+
+    def detect_close_button(self, image) -> DetectionResult:
+        """
+        Detect the close button of the purchase popup.
+
+        Search is restricted to the upper-right area
+        where the popup close button is expected.
+        """
+
+        self.log(
+            "[PurchasePopupVision] "
+            "Detecting close button..."
+        )
+
+        result = self.detector.detect(
+            image=image,
+            template_path=self.close_button_template,
+            roi=self.CLOSE_BUTTON_ROI,
+        )
+
+        if result.found:
+            self.log(
+                "[PurchasePopupVision] "
+                f"Close button FOUND "
+                f"center={result.center} "
+                f"confidence={result.confidence:.4f}"
+            )
+        else:
+            self.log(
+                "[PurchasePopupVision] "
+                f"Close button NOT FOUND "
                 f"confidence={result.confidence:.4f}"
             )
 

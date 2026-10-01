@@ -15,7 +15,7 @@ def log(message):
 
 def main():
     print("=" * 60)
-    print("Purchase Gem Vision")
+    print("Purchase Popup Vision")
     print("=" * 60)
 
     # ---------------------------------------------------------
@@ -57,28 +57,55 @@ def main():
         logger=log,
     )
 
+    # ---------------------------------------------------------
+    # Detect Purchase Gem
+    # ---------------------------------------------------------
+
     print("[Vision] Detecting purchase gem...")
 
-    result = vision.detect_purchase_gem(image)
+    gem_result = vision.detect_purchase_gem(image)
 
     # ---------------------------------------------------------
-    # Result
+    # Detect Close Button
+    # ---------------------------------------------------------
+
+    print()
+    print("[Vision] Detecting close button...")
+
+    close_result = vision.detect_close_button(image)
+
+    # ---------------------------------------------------------
+    # Results
     # ---------------------------------------------------------
 
     print()
     print("-" * 60)
 
-    if result.found:
+    if gem_result.found:
         print("[RESULT] PURCHASE GEM FOUND")
-        print(f"[RESULT] Confidence : {result.confidence:.4f}")
-        print(f"[RESULT] Center     : {result.center}")
+        print(f"[RESULT] Confidence : {gem_result.confidence:.4f}")
+        print(f"[RESULT] Center     : {gem_result.center}")
         print(
             f"[RESULT] Size       : "
-            f"{result.width}x{result.height}"
+            f"{gem_result.width}x{gem_result.height}"
         )
     else:
         print("[RESULT] PURCHASE GEM NOT FOUND")
-        print(f"[RESULT] Confidence : {result.confidence:.4f}")
+        print(f"[RESULT] Confidence : {gem_result.confidence:.4f}")
+
+    print()
+
+    if close_result.found:
+        print("[RESULT] CLOSE BUTTON FOUND")
+        print(f"[RESULT] Confidence : {close_result.confidence:.4f}")
+        print(f"[RESULT] Center     : {close_result.center}")
+        print(
+            f"[RESULT] Size       : "
+            f"{close_result.width}x{close_result.height}"
+        )
+    else:
+        print("[RESULT] CLOSE BUTTON NOT FOUND")
+        print(f"[RESULT] Confidence : {close_result.confidence:.4f}")
 
     print("-" * 60)
 
