@@ -5,11 +5,16 @@ from vision.detector import Detector, DetectionResult
 
 class PurchasePopupVision:
     """
-    Vision logic for shop/purchase offer popups.
+    Vision logic for shop/purchase offer popups
+    and the game's global close button.
 
     This class only detects visual elements.
     It does NOT tap, dismiss, or manage popup lifecycle.
     """
+
+    # ---------------------------------------------------------
+    # Purchase Popup ROIs
+    # ---------------------------------------------------------
 
     PURCHASE_GEM_ROI = (
         350,
@@ -18,13 +23,28 @@ class PurchasePopupVision:
         460,
     )
 
-    # Close button is located in the upper-right area
-    # of the purchase popup.
+    # Existing purchase-popup close button ROI.
+    # Kept unchanged to preserve current behavior.
     CLOSE_BUTTON_ROI = (
         650,
         0,
         1080,
         400,
+    )
+
+    # ---------------------------------------------------------
+    # Global Screen
+    # ---------------------------------------------------------
+
+    # LDPlayer screenshot resolution used by this project.
+    SCREEN_WIDTH = 960
+    SCREEN_HEIGHT = 540
+
+    GLOBAL_CLOSE_BUTTON_ROI = (
+        0,
+        0,
+        SCREEN_WIDTH,
+        SCREEN_HEIGHT,
     )
 
     def __init__(self, detector=None, logger=None):
@@ -102,7 +122,7 @@ class PurchasePopupVision:
         return result
 
     # ---------------------------------------------------------
-    # Close Button
+    # Purchase Popup Close Button
     # ---------------------------------------------------------
 
     def detect_close_button(self, image) -> DetectionResult:
@@ -111,6 +131,9 @@ class PurchasePopupVision:
 
         Search is restricted to the upper-right area
         where the popup close button is expected.
+
+        This method is intentionally preserved for
+        Purchase Popup handling.
         """
 
         self.log(
@@ -135,6 +158,56 @@ class PurchasePopupVision:
             self.log(
                 "[PurchasePopupVision] "
                 f"Close button NOT FOUND "
+                f"confidence={result.confidence:.4f}"
+            )
+
+        return result
+
+    # ---------------------------------------------------------
+    # Global Close Button
+    # ---------------------------------------------------------
+
+    def detect_global_close_button(
+        self,
+        image,
+    ) -> DetectionResult:
+        """
+        Detect the game's global close button.
+
+        The close button can appear in different positions
+        depending on the popup or notification.
+
+        Therefore the entire standard LDPlayer screen
+        is searched:
+
+            (0, 0) → (960, 540)
+
+        This method uses the same trusted close-button
+        template as Purchase Popup Vision.
+        """
+
+        self.log(
+            "[PurchasePopupVision] "
+            "Detecting GLOBAL close button..."
+        )
+
+        result = self.detector.detect(
+            image=image,
+            template_path=self.close_button_template,
+            roi=self.GLOBAL_CLOSE_BUTTON_ROI,
+        )
+
+        if result.found:
+            self.log(
+                "[PurchasePopupVision] "
+                f"GLOBAL close button FOUND "
+                f"center={result.center} "
+                f"confidence={result.confidence:.4f}"
+            )
+        else:
+            self.log(
+                "[PurchasePopupVision] "
+                f"GLOBAL close button NOT FOUND "
                 f"confidence={result.confidence:.4f}"
             )
 

@@ -4,7 +4,8 @@ from core.quest_manager import QuestManager
 from navigation.castle_navigation import CastleNavigation
 from navigation.world_navigation import WorldNavigation
 from quests.routines.test_quest import TestQuestRoutine
-from core.popup_manager import PopupManager
+from core.popup_manager import PopupManager, PopupResult
+
 
 class AutomationEngine:
 
@@ -113,17 +114,77 @@ class AutomationEngine:
             "Checking purchase popup"
         )
 
-        result = self.popup_manager.handle_purchase_popup()
+        result = (
+            self.popup_manager
+            .handle_purchase_popup()
+        )
 
-        if result:
+        if result == PopupResult.NOT_FOUND:
+            self.log(
+                "[AutomationEngine] "
+                "No purchase popup detected"
+            )
+
+        elif result == PopupResult.HANDLED:
             self.log(
                 "[AutomationEngine] "
                 "Purchase popup HANDLED"
             )
-        else:
+
+        elif result == PopupResult.FAILED:
             self.log(
                 "[AutomationEngine] "
-                "No purchase popup handled"
+                "Purchase popup handling FAILED"
+            )
+
+        return result
+
+    # ---------------------------------------------------------
+    # Global Popup Safety Layer
+    # ---------------------------------------------------------
+
+    def handle_popups(self):
+        """
+        Global popup safety entry point.
+
+        PopupManager handles all supported popup types.
+
+        Returns:
+            PopupResult.NOT_FOUND
+                No popup was present.
+
+            PopupResult.HANDLED
+                One or more popups were handled successfully.
+
+            PopupResult.FAILED
+                A popup was detected but could not be
+                safely handled.
+        """
+
+        self.log(
+            "[AutomationEngine] "
+            "Starting Global Popup Safety Layer"
+        )
+
+        result = self.popup_manager.handle_popups()
+
+        if result == PopupResult.NOT_FOUND:
+            self.log(
+                "[AutomationEngine] "
+                "No popups detected"
+            )
+
+        elif result == PopupResult.HANDLED:
+            self.log(
+                "[AutomationEngine] "
+                "All detected popups HANDLED"
+            )
+
+        elif result == PopupResult.FAILED:
+            self.log(
+                "[AutomationEngine] "
+                "Popup handling FAILED - "
+                "automation should STOP"
             )
 
         return result
