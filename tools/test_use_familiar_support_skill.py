@@ -1,6 +1,10 @@
-import unittest
+import sys
 from pathlib import Path
+import unittest
 from unittest.mock import Mock
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from quests.routines.use_familiar_support_skill import (
     UseFamiliarSupportSkillRoutine,
