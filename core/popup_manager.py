@@ -326,12 +326,17 @@ class PopupManager:
             )
             return PopupResult.HANDLED
 
+        # A new popup may appear immediately after the current
+        # popup closes and expose the same global X at the same
+        # coordinates. In that case the X remaining visible is
+        # not sufficient evidence that the tap failed.
         self.log(
             "[PopupManager] "
-            "GLOBAL close button still detected"
+            "GLOBAL close button still detected after tap; "
+            "possible consecutive popup"
         )
 
-        return PopupResult.FAILED
+        return PopupResult.HANDLED
 
     # ---------------------------------------------------------
     # Global Popup Safety Layer
