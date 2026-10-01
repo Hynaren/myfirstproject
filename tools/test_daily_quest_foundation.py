@@ -1,8 +1,5 @@
 """
 v0.3 - Daily Quest Foundation Tests
-
-These tests validate the exact 25 Daily Quest registry and the
-definition/manager execution contract without requiring LDPlayer.
 """
 
 import sys
@@ -18,6 +15,9 @@ from quests.definitions import (
     DAILY_QUEST_DEFINITIONS,
     QuestDefinition,
     QUEST_DEFINITIONS,
+)
+from quests.routines.use_familiar_support_skill import (
+    UseFamiliarSupportSkillRoutine,
 )
 
 
@@ -54,7 +54,7 @@ class DailyQuestFoundationTests(unittest.TestCase):
 
     def test_exactly_25_daily_quests_are_registered(self):
         self.assertEqual(len(DAILY_QUEST_DEFINITIONS), 25)
-        self.assertEqual(len(QUEST_DEFINITIONS), 26)  # 25 daily + test quest
+        self.assertEqual(len(QUEST_DEFINITIONS), 26)
 
     def test_daily_quests_match_game_order_names_and_targets(self):
         actual = tuple(
@@ -63,10 +63,15 @@ class DailyQuestFoundationTests(unittest.TestCase):
         )
         self.assertEqual(actual, EXPECTED_QUESTS)
 
-    def test_daily_quests_have_no_unimplemented_routine_yet(self):
-        self.assertTrue(
-            all(d.routine_factory is None for d in DAILY_QUEST_DEFINITIONS)
-        )
+    def test_only_familiar_support_skill_has_routine(self):
+        for definition in DAILY_QUEST_DEFINITIONS:
+            if definition.quest_id == "use_familiar_support_skill":
+                self.assertIs(
+                    definition.routine_factory,
+                    UseFamiliarSupportSkillRoutine,
+                )
+            else:
+                self.assertIsNone(definition.routine_factory)
 
     def test_test_quest_definition_has_routine(self):
         definition = QUEST_DEFINITIONS["test_quest"]
