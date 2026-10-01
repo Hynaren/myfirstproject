@@ -4,6 +4,7 @@ from core.quest_manager import QuestManager
 from navigation.castle_navigation import CastleNavigation
 from navigation.world_navigation import WorldNavigation
 from quests.routines.test_quest import TestQuestRoutine
+from quests.definitions import QUEST_DEFINITIONS
 from core.popup_manager import PopupManager, PopupResult
 
 
@@ -109,6 +110,59 @@ class AutomationEngine:
             self.log(
                 "[AutomationEngine] "
                 "Test Quest FAILED"
+            )
+
+        return result
+
+    # ---------------------------------------------------------
+    # Daily Quest
+    # ---------------------------------------------------------
+
+    def run_daily_quest(self, quest_id):
+        """
+        Run one registered Daily Quest.
+
+        Popup safety is always executed before the quest routine.
+        Unknown quests and quests without an implemented routine are
+        rejected safely by the execution layer.
+        """
+        self.log(
+            f"[AutomationEngine] "
+            f"Starting Daily Quest: {quest_id}"
+        )
+
+        definition = QUEST_DEFINITIONS.get(quest_id)
+
+        if definition is None:
+            self.log(
+                f"[AutomationEngine] "
+                f"Unknown quest: {quest_id}"
+            )
+            return False
+
+        popup_result = self.handle_popups()
+
+        if popup_result == PopupResult.FAILED:
+            self.log(
+                f"[AutomationEngine] "
+                f"Daily Quest blocked by popup safety: "
+                f"{quest_id}"
+            )
+            return False
+
+        result = self.quest_manager.run_definition(
+            definition
+        )
+
+        if result:
+            self.log(
+                f"[AutomationEngine] "
+                f"Daily Quest COMPLETED: {quest_id}"
+            )
+        else:
+            self.log(
+                f"[AutomationEngine] "
+                f"Daily Quest FAILED: {quest_id}"
             )
 
         return result
