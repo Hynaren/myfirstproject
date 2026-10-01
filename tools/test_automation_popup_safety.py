@@ -14,16 +14,6 @@ from core.automation_engine import AutomationEngine
 from core.popup_manager import PopupResult
 
 
-class FakeRoutine:
-    def __init__(self, result=True):
-        self.result = result
-        self.run_called = False
-
-    def run(self):
-        self.run_called = True
-        return self.result
-
-
 class AutomationEnginePopupSafetyTests(unittest.TestCase):
     def make_engine(self, popup_result):
         engine = AutomationEngine.__new__(AutomationEngine)
@@ -40,8 +30,6 @@ class AutomationEnginePopupSafetyTests(unittest.TestCase):
 
     def test_popup_handled_allows_quest_to_run(self):
         engine = self.make_engine(PopupResult.HANDLED)
-
-        routine = FakeRoutine()
         engine.quest_manager.run_quest.return_value = True
 
         result = engine.run_test_quest()
@@ -49,11 +37,9 @@ class AutomationEnginePopupSafetyTests(unittest.TestCase):
         self.assertTrue(result)
         engine.popup_manager.handle_popups.assert_called_once()
         engine.quest_manager.run_quest.assert_called_once()
-        self.assertTrue(routine.run_called is False)
 
     def test_no_popup_allows_quest_to_run(self):
         engine = self.make_engine(PopupResult.NOT_FOUND)
-
         engine.quest_manager.run_quest.return_value = True
 
         result = engine.run_test_quest()
