@@ -2,10 +2,9 @@ Quest #2 — Claim Login Gift templates
 
 Required real LDPlayer templates:
 
-1. events_icon.png
-   - Stable visual anchor used to open the Events screen.
+The Castle Events shortcut does NOT need a template. Its slot is fixed, but its icon changes with the active event (for example Solo / Hell). The routine taps the fixed slot and verifies the Events screen using the Login Gifts card.
 
-2. login_gifts.png
+1. login_gifts.png
    - Stable visual anchor for the Login Gifts entry/card.
 
 3. claim_button.png
@@ -20,4 +19,4 @@ Template rules:
 - Do not encode fixed coordinates into the template.
 - Do not use web/search screenshots as production templates.
 
-Quest #2 currently fails safely when any required template is missing.
+Quest #2 currently fails safely when any required template is missing. The fixed Events shortcut is intentionally coordinate-based because its screen position is stable while its icon is dynamic.
