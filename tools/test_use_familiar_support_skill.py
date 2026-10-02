@@ -47,6 +47,53 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
             for path in (familiar, usable):
                 path.unlink(missing_ok=True)
 
+    def test_target_found_after_scroll_is_tapped_and_consumed(self):
+        action_engine = Mock()
+        action_engine.tap.return_value = True
+        action_engine.swipe.return_value = True
+        game_state = Mock()
+        logger = Mock()
+
+        root = Path(__file__).resolve().parent
+        familiar, usable = self._touch_templates(root)
+
+        target = SimpleNamespace(
+            found=True, center=(321, 234), confidence=0.97, width=40, height=20
+        )
+        verify = SimpleNamespace(
+            found=False, center=None, confidence=0.20, width=40, height=20
+        )
+        action_engine.detect.side_effect = [
+            # Open Familiar.
+            SimpleNamespace(found=True, center=(50, 50)),
+            # First Economy viewport: no usable skill.
+            SimpleNamespace(found=False, center=None, confidence=0.50, width=40, height=20),
+            # Second Economy viewport after swipe: usable skill found.
+            target,
+            # Post-tap ROI verification: target is gone.
+            verify,
+        ]
+
+        try:
+            routine = UseFamiliarSupportSkillRoutine(
+                action_engine=action_engine,
+                game_state=game_state,
+                logger=logger,
+                familiar_icon_template=familiar,
+                usable_skill_template=usable,
+                max_swipes=4,
+            )
+
+            self.assertTrue(routine.run())
+            self.assertEqual(action_engine.tap.call_count, 2)
+            action_engine.swipe.assert_called_once_with(
+                480, 430, 480, 190, duration=350
+            )
+            action_engine.wait.assert_called()
+        finally:
+            for path in (familiar, usable):
+                path.unlink(missing_ok=True)
+
     def test_found_target_is_tapped_and_consumed(self):
         action_engine = Mock()
         action_engine.tap.return_value = True
