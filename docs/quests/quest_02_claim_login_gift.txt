@@ -9,10 +9,10 @@ The quest target is 1 claim.
 
 The first implementation uses the game's Login Gifts entry point:
 
-1. Detect the Events entry from the current Castle UI.
-2. Tap Events.
-3. Wait for the Events screen.
-4. Detect the Login Gifts entry/card.
+1. Tap the fixed Castle Events shortcut slot.
+   - The slot is fixed, but the icon itself changes with the active event (e.g. Solo / Hell), so the icon is intentionally NOT used as a production template.
+2. Wait for the Events screen.
+3. Detect the Login Gifts entry/card.
 5. Tap Login Gifts.
 6. Wait for the Login Gifts screen.
 7. Detect the currently claimable Claim button.
@@ -26,8 +26,6 @@ The exact visual anchors must come from real LDPlayer screenshots.
 
 Required templates:
 
-- events_icon.png
-  - Stable visual anchor for opening the Events screen.
 - login_gifts.png
   - Stable visual anchor for the Login Gifts entry/card.
 - claim_button.png
@@ -36,7 +34,7 @@ Required templates:
 
 The routine must not depend on:
 
-- fixed coordinates;
+- hardcoded event-card coordinates;
 - OCR of reward amounts;
 - a fixed reward/day index;
 - hardcoded event-card positions;
@@ -50,7 +48,7 @@ All target coordinates come from Detector results.
 The routine verifies the claim action by rescanning the active Claim template.
 
 Success:
-- Events entry detected and opened;
+- Fixed Events shortcut tapped and Events screen reached;
 - Login Gifts entry detected and opened;
 - active Claim button detected;
 - Claim tap succeeds;
@@ -58,6 +56,7 @@ Success:
 
 Failure:
 - any required template is missing;
+- the fixed Events shortcut tap fails;
 - any required target is not detected;
 - any tap fails;
 - the active Claim state remains visible after the claim.
@@ -95,7 +94,7 @@ as templates.
 
 Using a current LDPlayer screenshot of the Login Gift flow:
 
-1. Crop Events entry template.
+1. Use the fixed Events shortcut position; no Events icon template is needed.
 2. Crop Login Gifts entry/card template.
 3. Crop active Claim button template.
 4. Put them under assets/login_gift/.
