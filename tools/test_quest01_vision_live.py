@@ -7,13 +7,19 @@ This script only connects to ADB, captures the current screen, and detects:
 It NEVER taps or swipes.
 """
 
+import sys
 from pathlib import Path
+
+# Allow direct execution as:
+# python tools/test_quest01_vision_live.py
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from adb.controller import ADBController
 from core.action_engine import ActionEngine
 
 
-ROOT = Path(__file__).resolve().parent.parent
 FAMILIAR_TEMPLATE = ROOT / "assets" / "familiar_support" / "familiar_icon.png"
 USABLE_TEMPLATE = ROOT / "assets" / "familiar_support" / "economy_usable_use.png"
 
