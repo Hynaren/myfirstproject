@@ -16,15 +16,13 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
 
     def _touch_templates(self, root, usable_exists=True):
         familiar = root / "familiar.png"
-        economy = root / "economy.png"
         usable = root / "usable.png"
 
         familiar.touch()
-        economy.touch()
         if usable_exists:
             usable.touch()
 
-        return familiar, economy, usable
+        return familiar, usable
 
     def test_missing_usable_template_fails_safely(self):
         action_engine = Mock()
@@ -32,7 +30,7 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
         logger = Mock()
 
         root = Path(__file__).resolve().parent
-        familiar, economy, usable = self._touch_templates(
+        familiar, usable = self._touch_templates(
             root,
             usable_exists=False,
         )
@@ -43,15 +41,13 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
                 game_state=game_state,
                 logger=logger,
                 familiar_icon_template=familiar,
-                economy_tab_template=economy,
                 usable_skill_template=usable,
             )
 
             self.assertFalse(routine.run())
             action_engine.detect.assert_any_call(str(familiar))
-            action_engine.detect.assert_any_call(str(economy))
         finally:
-            for path in (familiar, economy, usable):
+            for path in (familiar, usable):
                 path.unlink(missing_ok=True)
 
     def test_found_target_is_tapped_and_consumed(self):
@@ -63,7 +59,7 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
         logger = Mock()
 
         root = Path(__file__).resolve().parent
-        familiar, economy, usable = self._touch_templates(root)
+        familiar, usable = self._touch_templates(root)
 
         target = SimpleNamespace(
             found=True,
@@ -82,7 +78,6 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
 
         action_engine.detect.side_effect = [
             SimpleNamespace(found=True, center=(50, 50)),
-            SimpleNamespace(found=True, center=(100, 100)),
             target,
             verify,
         ]
@@ -93,7 +88,6 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
                 game_state=game_state,
                 logger=logger,
                 familiar_icon_template=familiar,
-                economy_tab_template=economy,
                 usable_skill_template=usable,
             )
 
@@ -101,7 +95,7 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
 
             self.assertEqual(
                 action_engine.tap.call_count,
-                3,
+                2,
             )
             action_engine.swipe.assert_not_called()
             action_engine.wait.assert_called()
