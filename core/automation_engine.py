@@ -150,6 +150,14 @@ class AutomationEngine:
             )
             return False
 
+        # Give the game UI a short settle period after popup handling.
+        # PopupManager can close an overlay immediately before the quest
+        # routine taps a fixed navigation shortcut.
+        self.log(
+            "[AutomationEngine] Waiting 2.00s for UI settle after popup safety"
+        )
+        self.action_engine.wait(2.0)
+
         result = self.quest_manager.run_definition(
             definition
         )
