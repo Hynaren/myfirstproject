@@ -36,7 +36,6 @@ class UseFamiliarSupportSkillRoutine(BaseQuestRoutine):
         logger=None,
         popup_manager=None,
         familiar_icon_template=None,
-        economy_tab_template=None,
         usable_skill_template=None,
         max_swipes=DEFAULT_MAX_SWIPES,
         template_path=None,
@@ -58,10 +57,6 @@ class UseFamiliarSupportSkillRoutine(BaseQuestRoutine):
         self.familiar_icon_template = Path(
             familiar_icon_template
             or familiar_dir / "familiar_icon.png"
-        )
-        self.economy_tab_template = Path(
-            economy_tab_template
-            or familiar_dir / "economy_tab.png"
         )
         self.usable_skill_template = Path(
             usable_skill_template
@@ -101,31 +96,6 @@ class UseFamiliarSupportSkillRoutine(BaseQuestRoutine):
             self.log(
                 "[UseFamiliarSupportSkillRoutine] "
                 "Familiar icon tap FAILED"
-            )
-            return False
-
-        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
-        return True
-
-    def _open_economy(self):
-        if not self._template_ready(self.economy_tab_template):
-            return False
-
-        result = self.action_engine.detect(
-            str(self.economy_tab_template)
-        )
-
-        if not result.found:
-            self.log(
-                "[UseFamiliarSupportSkillRoutine] "
-                "Economy tab NOT FOUND"
-            )
-            return False
-
-        if not self.action_engine.tap(*result.center):
-            self.log(
-                "[UseFamiliarSupportSkillRoutine] "
-                "Economy tab tap FAILED"
             )
             return False
 
@@ -189,9 +159,6 @@ class UseFamiliarSupportSkillRoutine(BaseQuestRoutine):
         )
 
         if not self._open_familiar():
-            return False
-
-        if not self._open_economy():
             return False
 
         total_scans = self.max_swipes + 1
