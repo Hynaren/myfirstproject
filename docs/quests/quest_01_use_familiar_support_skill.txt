@@ -5,17 +5,24 @@
 Complete the Daily Quest by using one Familiar Support Skill.
 The quest target is only 1 use, so the routine stops after one successful claim.
 
+For the first implementation pass, prefer the **Economy** skill category.
+The Economy skills observed in the supplied LDPlayer screenshots can be
+completed with a direct USE action, making this the simplest reliable target
+group for the first live implementation.
+
 ## Confirmed game flow
 
 1. Detect the Familiar icon (dragon head) at the edge of the castle screen.
 2. Tap the Familiar icon.
 3. Wait briefly for the Familiar skill panel/list to open.
-4. The desired skill may not be visible immediately.
-5. Swipe the Familiar skill list upward so lower skills become visible.
-6. Detect the claimable USE + ! visual state.
-7. If the target is found, tap it.
-8. Verify the skill changed from the claimable state to the post-use/cooldown state.
-9. Quest is complete after one successful use.
+4. Detect and open the **Economy** category.
+5. Scan the visible Economy skills for an available USE state.
+6. If the desired skill is not visible, swipe the Economy list upward.
+7. Repeat the scan for a bounded number of swipes.
+8. If a usable Economy skill is found, tap it.
+9. Verify that the exact detected target region no longer contains the
+   claimable USE visual state.
+10. Quest is complete after one successful use.
 
 ## Vision strategy
 
@@ -72,22 +79,24 @@ Global popup safety remains owned by AutomationEngine / PopupManager; do not dup
 ## Current implementation status
 
 - QuestDefinition is wired to UseFamiliarSupportSkillRoutine.
-- Unit tests for the routine pass.
-- Real Familiar templates have not been created yet.
+- ActionEngine now exposes reusable SWIPE execution and ROI-aware detection.
+- Quest #1 routine now implements the Economy-first flow with bounded scrolling.
+- Unit tests cover missing-template safety and successful target consumption.
+- Real Familiar/Economy templates have not been created yet.
 - Live LDPlayer Vision testing has not been completed yet.
-- The current routine intentionally fails safely when the real template is missing.
+- The routine intentionally fails safely when required real templates are missing.
 
 ## Next implementation step
 
-When real LDPlayer screenshots are available:
-1. Identify the Familiar icon.
-2. Identify the exact Familiar panel/list ROI.
-3. Determine the required swipe gesture.
-4. Capture the USE + ! template.
-5. Capture the post-use/cooldown verification template.
-6. Implement bounded swipe + detect loop.
-7. Live-test on LDPlayer.
-8. Commit the completed Quest #1 implementation and update this document with any final parameters.
+Using the supplied real LDPlayer screenshots:
+1. Crop the Familiar icon template.
+2. Crop the Economy category template.
+3. Crop an active Economy USE target template.
+4. Put the three templates under assets/familiar_support/.
+5. Run the Quest #1 test suite.
+6. Live-test on LDPlayer.
+7. Adjust the swipe bounds/ROI only from live evidence.
+8. Update this document with final live-tested parameters.
 
 ## Design rule
 
