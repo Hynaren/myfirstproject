@@ -15,14 +15,13 @@ group for the first live implementation.
 1. Detect the Familiar icon (dragon head) at the edge of the castle screen.
 2. Tap the Familiar icon.
 3. Wait briefly for the Familiar skill panel/list to open.
-4. Detect and open the **Economy** category.
-5. Scan the visible Economy skills for an available USE state.
-6. If the desired skill is not visible, swipe the Economy list upward.
-7. Repeat the scan for a bounded number of swipes.
-8. If a usable Economy skill is found, tap it.
-9. Verify that the exact detected target region no longer contains the
+4. Scan the visible **Economy** section for an available USE state.
+5. If no usable Economy skill is visible, swipe the Support Skills list upward.
+6. Repeat the scan for a bounded number of swipes.
+7. If a usable Economy skill is found, tap it.
+8. Verify that the exact detected target region no longer contains the
    claimable USE visual state.
-10. Quest is complete after one successful use.
+9. Quest is complete after one successful use.
 
 ## Vision strategy
 
@@ -82,7 +81,7 @@ Global popup safety remains owned by AutomationEngine / PopupManager; do not dup
 - ActionEngine now exposes reusable SWIPE execution and ROI-aware detection.
 - Quest #1 routine now implements the Economy-first flow with bounded scrolling.
 - Unit tests cover missing-template safety and successful target consumption.
-- Real Familiar/Economy templates have not been created yet.
+- A real Familiar icon template and active Economy USE marker template have now been cropped from LDPlayer screenshots; they still require live detector validation.
 - Live LDPlayer Vision testing has not been completed yet.
 - The routine intentionally fails safely when required real templates are missing.
 
@@ -90,9 +89,8 @@ Global popup safety remains owned by AutomationEngine / PopupManager; do not dup
 
 Using the supplied real LDPlayer screenshots:
 1. Crop the Familiar icon template.
-2. Crop the Economy category template.
-3. Crop an active Economy USE target template.
-4. Put the three templates under assets/familiar_support/.
+2. Crop an active Economy USE target template.
+3. Put the two templates under assets/familiar_support.
 5. Run the Quest #1 test suite.
 6. Live-test on LDPlayer.
 7. Adjust the swipe bounds/ROI only from live evidence.
