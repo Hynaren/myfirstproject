@@ -62,8 +62,8 @@ class ClaimLoginGiftRoutineTest(unittest.TestCase):
         self.assertTrue(routine.run())
 
         self.assertEqual(action_engine.detect.call_count, 3)
-        self.assertEqual(action_engine.tap.call_count, 3)
-        self.assertEqual(action_engine.wait.call_count, 3)
+        self.assertEqual(action_engine.tap.call_count, 4)
+        self.assertEqual(action_engine.wait.call_count, 4)
 
     def test_claim_verification_fails_if_button_remains(self):
         temp_dir, paths = self._make_templates()
