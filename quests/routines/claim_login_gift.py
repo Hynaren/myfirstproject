@@ -9,13 +9,22 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
     QUEST_ID = "claim_login_gift"
     DEFAULT_WAIT_SECONDS = 0.8
 
+    # The Castle event shortcut is a fixed UI slot. Its icon changes
+    # with the active event (e.g. Solo / Hell), so template matching
+    # the icon itself would be brittle.
+    EVENT_SHORTCUT_CENTER = (250, 68)
+    EVENT_SHORTCUT_JITTER = 3
+
+    # Stable regions for the two actual state checks.
+    LOGIN_GIFTS_ROI = (220, 105, 390, 465)
+    CLAIM_BUTTON_ROI = (700, 70, 910, 165)
+
     def __init__(
         self,
         action_engine,
         game_state,
         logger=None,
         popup_manager=None,
-        events_template=None,
         login_gifts_template=None,
         claim_template=None,
     ):
@@ -32,9 +41,6 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
             / "login_gift"
         )
 
-        self.events_template = Path(
-            events_template or asset_dir / "events_icon.png"
-        )
         self.login_gifts_template = Path(
             login_gifts_template or asset_dir / "login_gifts.png"
         )
@@ -53,48 +59,54 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
 
     def _templates_ready(self):
         return (
-            self._template_ready(self.events_template)
-            and self._template_ready(self.login_gifts_template)
+            self._template_ready(self.login_gifts_template)
             and self._template_ready(self.claim_template)
         )
 
-    def _tap_template(self, template, label):
-        result = self.action_engine.detect(str(template))
-
-        if result is None or not result.found:
-            self.log(
-                f"[ClaimLoginGiftRoutine] {label} NOT FOUND"
-            )
-            return False
-
+    def _open_events(self):
         self.log(
-            f"[ClaimLoginGiftRoutine] {label} found at "
-            f"{result.center} confidence={result.confidence:.4f}"
+            "[ClaimLoginGiftRoutine] "
+            f"Tapping fixed Events shortcut at "
+            f"{self.EVENT_SHORTCUT_CENTER}"
         )
 
-        if not self.action_engine.tap(*result.center):
-            self.log(
-                f"[ClaimLoginGiftRoutine] {label} TAP FAILED"
-            )
-            return False
-
-        return True
-
-    def _open_events(self):
-        if not self._tap_template(
-            self.events_template,
-            "Events entry",
+        if not self.action_engine.tap(
+            *self.EVENT_SHORTCUT_CENTER,
+            jitter=self.EVENT_SHORTCUT_JITTER,
         ):
+            self.log(
+                "[ClaimLoginGiftRoutine] "
+                "Events shortcut TAP FAILED"
+            )
             return False
 
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
         return True
 
     def _open_login_gifts(self):
-        if not self._tap_template(
-            self.login_gifts_template,
-            "Login Gifts entry",
-        ):
+        result = self.action_engine.detect(
+            str(self.login_gifts_template),
+            roi=self.LOGIN_GIFTS_ROI,
+        )
+
+        if result is None or not result.found:
+            self.log(
+                "[ClaimLoginGiftRoutine] "
+                "Login Gifts entry NOT FOUND"
+            )
+            return False
+
+        self.log(
+            "[ClaimLoginGiftRoutine] "
+            f"Login Gifts entry found at {result.center} "
+            f"confidence={result.confidence:.4f}"
+        )
+
+        if not self.action_engine.tap(*result.center):
+            self.log(
+                "[ClaimLoginGiftRoutine] "
+                "Login Gifts entry TAP FAILED"
+            )
             return False
 
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
@@ -102,13 +114,15 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
 
     def _claim_login_gift(self):
         result = self.action_engine.detect(
-            str(self.claim_template)
+            str(self.claim_template),
+            roi=self.CLAIM_BUTTON_ROI,
         )
 
         if result is None or not result.found:
             self.log(
                 "[ClaimLoginGiftRoutine] "
-                "Claim button NOT FOUND; Login Gift may already be claimed"
+                "Claim button NOT FOUND; "
+                "Login Gift may already be claimed"
             )
             return False
 
@@ -120,14 +134,16 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
 
         if not self.action_engine.tap(*result.center):
             self.log(
-                "[ClaimLoginGiftRoutine] Claim button TAP FAILED"
+                "[ClaimLoginGiftRoutine] "
+                "Claim button TAP FAILED"
             )
             return False
 
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
 
         verify_result = self.action_engine.detect(
-            str(self.claim_template)
+            str(self.claim_template),
+            roi=self.CLAIM_BUTTON_ROI,
         )
 
         if verify_result is None:
@@ -153,7 +169,6 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
     def run(self):
         self.log("[ClaimLoginGiftRoutine] START")
 
-        # Missing assets must never cause partial game interaction.
         if not self._templates_ready():
             return False
 
