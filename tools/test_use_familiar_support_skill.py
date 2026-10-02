@@ -90,7 +90,10 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
                 [call(50, 50), call(321, 234)],
             )
             action_engine.swipe.assert_not_called()
-            action_engine.wait.assert_called_once()
+            self.assertEqual(
+                action_engine.wait.call_args_list,
+                [call(0.6), call(0.6)],
+            )
         finally:
             for path in (familiar, usable):
                 path.unlink(missing_ok=True)
