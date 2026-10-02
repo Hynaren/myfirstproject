@@ -55,7 +55,6 @@ class ClaimLoginGiftRoutineTest(unittest.TestCase):
         routine = ClaimLoginGiftRoutine(
             action_engine=action_engine,
             game_state=MagicMock(),
-            events_template=paths["events"],
             login_gifts_template=paths["login_gifts"],
             claim_template=paths["claim"],
         )
