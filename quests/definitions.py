@@ -43,7 +43,7 @@ DAILY_QUEST_DEFINITIONS = (
             fromlist=["UseFamiliarSupportSkillRoutine"],
         ).UseFamiliarSupportSkillRoutine,
     ),
-    QuestDefinition("claim_login_gift", "Claim Login Gift", "castle", 1, None),
+    QuestDefinition(\n        "claim_login_gift",\n        "Claim Login Gift",\n        "castle",\n        1,\n        __import__(\n            "quests.routines.claim_login_gift",\n            fromlist=["ClaimLoginGiftRoutine"],\n        ).ClaimLoginGiftRoutine,\n    ),
     QuestDefinition("open_free_mall_chests", "Open free Mall Chests", "castle", 1, None),
     QuestDefinition("shelter_troops", "Shelter troops", "castle", 1, None),
     QuestDefinition("use_emotes", "Use Emotes", "castle", 1, None),
