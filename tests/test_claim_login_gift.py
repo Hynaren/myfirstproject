@@ -13,7 +13,6 @@ class ClaimLoginGiftRoutineTest(unittest.TestCase):
         root = Path(temp_dir.name)
 
         paths = {
-            "events": root / "events_icon.png",
             "login_gifts": root / "login_gifts.png",
             "claim": root / "claim_button.png",
         }
@@ -28,7 +27,6 @@ class ClaimLoginGiftRoutineTest(unittest.TestCase):
         routine = ClaimLoginGiftRoutine(
             action_engine=action_engine,
             game_state=MagicMock(),
-            events_template="missing_events.png",
             login_gifts_template="missing_login_gifts.png",
             claim_template="missing_claim.png",
         )
@@ -43,13 +41,11 @@ class ClaimLoginGiftRoutineTest(unittest.TestCase):
 
         action_engine = MagicMock()
 
-        events_result = MagicMock(found=True, center=(100, 50), confidence=0.99)
         login_gifts_result = MagicMock(found=True, center=(300, 200), confidence=0.98)
         claim_result = MagicMock(found=True, center=(700, 450), confidence=0.97)
         verify_result = MagicMock(found=False, confidence=0.10)
 
         action_engine.detect.side_effect = [
-            events_result,
             login_gifts_result,
             claim_result,
             verify_result,
@@ -66,7 +62,7 @@ class ClaimLoginGiftRoutineTest(unittest.TestCase):
 
         self.assertTrue(routine.run())
 
-        self.assertEqual(action_engine.detect.call_count, 4)
+        self.assertEqual(action_engine.detect.call_count, 3)
         self.assertEqual(action_engine.tap.call_count, 3)
         self.assertEqual(action_engine.wait.call_count, 3)
 
@@ -77,7 +73,6 @@ class ClaimLoginGiftRoutineTest(unittest.TestCase):
         action_engine = MagicMock()
 
         action_engine.detect.side_effect = [
-            MagicMock(found=True, center=(100, 50), confidence=0.99),
             MagicMock(found=True, center=(300, 200), confidence=0.98),
             MagicMock(found=True, center=(700, 450), confidence=0.97),
             MagicMock(found=True, center=(700, 450), confidence=0.96),
