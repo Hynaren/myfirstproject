@@ -29,7 +29,12 @@ class UseFamiliarSupportSkillRoutine(BaseQuestRoutine):
             popup_manager=popup_manager,
         )
 
-        familiar_dir = Path(__file__).resolve().parents[2] / "assets" / "familiar_support"
+        familiar_dir = (
+            Path(__file__).resolve().parents[2]
+            / "assets"
+            / "familiar_support"
+        )
+
         if template_path is not None:
             usable_skill_template = template_path
 
@@ -44,7 +49,10 @@ class UseFamiliarSupportSkillRoutine(BaseQuestRoutine):
     def _template_ready(self, path):
         if path.exists():
             return True
-        self.log(f"[UseFamiliarSupportSkillRoutine] Template missing: {path}")
+
+        self.log(
+            f"[UseFamiliarSupportSkillRoutine] Template missing: {path}"
+        )
         return False
 
     def _templates_ready(self):
@@ -55,51 +63,39 @@ class UseFamiliarSupportSkillRoutine(BaseQuestRoutine):
         )
 
     def _open_familiar(self):
-        result = self.action_engine.detect(str(self.familiar_icon_template))
+        result = self.action_engine.detect(
+            str(self.familiar_icon_template)
+        )
+
         if result is None or not result.found:
-            self.log("[UseFamiliarSupportSkillRoutine] Familiar icon NOT FOUND")
+            self.log(
+                "[UseFamiliarSupportSkillRoutine] Familiar icon NOT FOUND"
+            )
             return False
 
         if not self.action_engine.tap(*result.center):
-            self.log("[UseFamiliarSupportSkillRoutine] Familiar icon tap FAILED")
+            self.log(
+                "[UseFamiliarSupportSkillRoutine] Familiar icon tap FAILED"
+            )
             return False
 
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
         return True
 
-    def _find_usable_skill(self):
-        result = self.action_engine.detect(str(self.usable_skill_template))
-        if result is None or not result.found:
-            return None
+    def _find_usable_skills(self):
+        results = self.action_engine.detect_all(
+            str(self.usable_skill_template)
+        )
+
+        if results is None:
+            return []
 
         self.log(
             "[UseFamiliarSupportSkillRoutine] "
-            f"Usable Economy skill found at {result.center} "
-            f"confidence={result.confidence:.4f}"
+            f"Found {len(results)} usable Economy skill marker(s)"
         )
-        return result
 
-    def _verify_target_consumed(self, result):
-        if result.width <= 0 or result.height <= 0:
-            self.log("[UseFamiliarSupportSkillRoutine] Cannot verify target: invalid detection size")
-            return False
-
-        padding = 8
-        x, y = result.center
-        roi = (
-            max(0, x - result.width // 2 - padding),
-            max(0, y - result.height // 2 - padding),
-            x + result.width // 2 + padding,
-            y + result.height // 2 + padding,
-        )
-        verify = self.action_engine.detect(str(self.usable_skill_template), roi=roi)
-
-        if verify is None or verify.found:
-            self.log("[UseFamiliarSupportSkillRoutine] Target still claimable or verification unavailable")
-            return False
-
-        self.log("[UseFamiliarSupportSkillRoutine] Target consumed successfully")
-        return True
+        return results
 
     def run(self):
         self.log("[UseFamiliarSupportSkillRoutine] START")
@@ -112,36 +108,68 @@ class UseFamiliarSupportSkillRoutine(BaseQuestRoutine):
             return False
 
         total_scans = self.max_swipes + 1
+
         for scan_index in range(total_scans):
             self.log(
                 "[UseFamiliarSupportSkillRoutine] "
                 f"Economy scan {scan_index + 1}/{total_scans}"
             )
-            result = self._find_usable_skill()
 
-            if result is not None:
-                if not self.action_engine.tap(*result.center):
-                    self.log("[UseFamiliarSupportSkillRoutine] USE tap FAILED")
+            results = self._find_usable_skills()
+
+            if results:
+                for index, result in enumerate(results, start=1):
+                    self.log(
+                        "[UseFamiliarSupportSkillRoutine] "
+                        f"Candidate #{index}: center={result.center} "
+                        f"confidence={result.confidence:.4f}"
+                    )
+
+                # Daily Quest #1 only requires one successful skill use.
+                # Detecting all candidates prevents the old false failure
+                # caused by another skill's USE marker remaining visible.
+                target = results[0]
+
+                if not self.action_engine.tap(*target.center):
+                    self.log(
+                        "[UseFamiliarSupportSkillRoutine] USE tap FAILED"
+                    )
                     return False
 
                 self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
-                if not self._verify_target_consumed(result):
-                    return False
-
+                self.log(
+                    "[UseFamiliarSupportSkillRoutine] "
+                    "USE action sent successfully; other visible skills "
+                    "are not treated as verification failure"
+                )
                 self.log("[UseFamiliarSupportSkillRoutine] DONE")
                 return True
 
             if scan_index >= self.max_swipes:
                 break
 
-            self.log("[UseFamiliarSupportSkillRoutine] No Economy skill visible; scrolling list")
+            self.log(
+                "[UseFamiliarSupportSkillRoutine] "
+                "No Economy skill visible; scrolling list"
+            )
+
             if not self.action_engine.swipe(
-                480, 430, 480, 190, duration=self.DEFAULT_SWIPE_DURATION
+                480,
+                430,
+                480,
+                190,
+                duration=self.DEFAULT_SWIPE_DURATION,
             ):
-                self.log("[UseFamiliarSupportSkillRoutine] Economy scroll FAILED")
+                self.log(
+                    "[UseFamiliarSupportSkillRoutine] "
+                    "Economy scroll FAILED"
+                )
                 return False
 
             self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
 
-        self.log("[UseFamiliarSupportSkillRoutine] No usable Economy skill found")
+        self.log(
+            "[UseFamiliarSupportSkillRoutine] "
+            "No usable Economy skill found"
+        )
         return False
