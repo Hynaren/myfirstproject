@@ -17,23 +17,18 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
     def _touch_templates(self, root, usable_exists=True):
         familiar = root / "familiar.png"
         usable = root / "usable.png"
-
         familiar.touch()
         if usable_exists:
             usable.touch()
-
         return familiar, usable
 
-    def test_missing_usable_template_fails_safely(self):
+    def test_missing_usable_template_fails_before_game_interaction(self):
         action_engine = Mock()
         game_state = Mock()
         logger = Mock()
 
         root = Path(__file__).resolve().parent
-        familiar, usable = self._touch_templates(
-            root,
-            usable_exists=False,
-        )
+        familiar, usable = self._touch_templates(root, usable_exists=False)
 
         try:
             routine = UseFamiliarSupportSkillRoutine(
@@ -45,7 +40,9 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
             )
 
             self.assertFalse(routine.run())
-            action_engine.detect.assert_any_call(str(familiar))
+            action_engine.detect.assert_not_called()
+            action_engine.tap.assert_not_called()
+            action_engine.swipe.assert_not_called()
         finally:
             for path in (familiar, usable):
                 path.unlink(missing_ok=True)
@@ -54,7 +51,6 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
         action_engine = Mock()
         action_engine.tap.return_value = True
         action_engine.swipe.return_value = True
-
         game_state = Mock()
         logger = Mock()
 
@@ -62,20 +58,11 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
         familiar, usable = self._touch_templates(root)
 
         target = SimpleNamespace(
-            found=True,
-            center=(123, 456),
-            confidence=0.99,
-            width=40,
-            height=20,
+            found=True, center=(123, 456), confidence=0.99, width=40, height=20
         )
         verify = SimpleNamespace(
-            found=False,
-            center=None,
-            confidence=0.20,
-            width=40,
-            height=20,
+            found=False, center=None, confidence=0.20, width=40, height=20
         )
-
         action_engine.detect.side_effect = [
             SimpleNamespace(found=True, center=(50, 50)),
             target,
@@ -92,11 +79,7 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
             )
 
             self.assertTrue(routine.run())
-
-            self.assertEqual(
-                action_engine.tap.call_count,
-                2,
-            )
+            self.assertEqual(action_engine.tap.call_count, 2)
             action_engine.swipe.assert_not_called()
             action_engine.wait.assert_called()
         finally:
