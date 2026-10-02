@@ -18,6 +18,8 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
     # Stable regions for the two actual state checks.
     LOGIN_GIFTS_ROI = (220, 105, 390, 465)
     CLAIM_BUTTON_ROI = (700, 70, 910, 165)
+    CLOSE_BUTTON_CENTER = (930, 35)
+    CLOSE_BUTTON_JITTER = 3
 
     def __init__(
         self,
@@ -163,6 +165,28 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
         self.log(
             "[ClaimLoginGiftRoutine] "
             "Login Gift claimed and verified"
+        )
+
+        self.log(
+            "[ClaimLoginGiftRoutine] "
+            f"Closing Login Gift window at {self.CLOSE_BUTTON_CENTER}"
+        )
+
+        if not self.action_engine.tap(
+            *self.CLOSE_BUTTON_CENTER,
+            jitter=self.CLOSE_BUTTON_JITTER,
+        ):
+            self.log(
+                "[ClaimLoginGiftRoutine] "
+                "Close button TAP FAILED"
+            )
+            return False
+
+        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+
+        self.log(
+            "[ClaimLoginGiftRoutine] "
+            "Login Gift window closed"
         )
         return True
 
