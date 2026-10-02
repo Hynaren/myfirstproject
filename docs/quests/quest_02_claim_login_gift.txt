@@ -18,7 +18,8 @@ The first implementation uses the game's Login Gifts entry point:
 7. Detect the currently claimable Claim button.
 8. Tap Claim.
 9. Verify the same claimable Claim visual state is no longer present.
-10. Quest is complete after one verified claim.
+10. Tap the fixed top-right X to close the Login Gift window.
+11. Quest is complete after one verified claim and successful close.
 
 The exact visual anchors must come from real LDPlayer screenshots.
 
@@ -52,7 +53,8 @@ Success:
 - Login Gifts entry detected and opened;
 - active Claim button detected;
 - Claim tap succeeds;
-- active Claim visual state is no longer detected.
+- active Claim visual state is no longer detected;
+- Login Gift window close tap succeeds.
 
 Failure:
 - any required template is missing;
