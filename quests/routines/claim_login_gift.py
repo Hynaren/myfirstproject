@@ -16,7 +16,7 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
     EVENT_SHORTCUT_JITTER = 3
 
     # Stable regions for the two actual state checks.
-    LOGIN_GIFTS_ROI = (220, 105, 390, 465)
+    LOGIN_GIFTS_ROI = (220, 105, 390, 530)
     CLAIM_BUTTON_ROI = (700, 70, 910, 165)
     CLOSE_BUTTON_CENTER = (930, 35)
     CLOSE_BUTTON_JITTER = 3
@@ -90,6 +90,20 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
             str(self.login_gifts_template),
             roi=self.LOGIN_GIFTS_ROI,
         )
+
+        # The Events carousel can shift slightly between game builds.
+        # If the bounded ROI misses the card, perform one full-screen
+        # fallback before failing the quest.
+        if result is None or not result.found:
+            self.log(
+                "[ClaimLoginGiftRoutine] "
+                "Login Gifts not found in primary ROI; "
+                "scanning full screen..."
+            )
+
+            result = self.action_engine.detect(
+                str(self.login_gifts_template)
+            )
 
         if result is None or not result.found:
             self.log(
