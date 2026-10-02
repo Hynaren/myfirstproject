@@ -1,0 +1,105 @@
+# Daily Quest #2 — Claim Login Gift
+
+## Goal
+
+Complete the Daily Quest by claiming the currently available Login Gift.
+The quest target is 1 claim.
+
+## Confirmed high-level flow
+
+The first implementation uses the game's Login Gifts entry point:
+
+1. Detect the Events entry from the current Castle UI.
+2. Tap Events.
+3. Wait for the Events screen.
+4. Detect the Login Gifts entry/card.
+5. Tap Login Gifts.
+6. Wait for the Login Gifts screen.
+7. Detect the currently claimable Claim button.
+8. Tap Claim.
+9. Verify the same claimable Claim visual state is no longer present.
+10. Quest is complete after one verified claim.
+
+The exact visual anchors must come from real LDPlayer screenshots.
+
+## Vision strategy
+
+Required templates:
+
+- events_icon.png
+  - Stable visual anchor for opening the Events screen.
+- login_gifts.png
+  - Stable visual anchor for the Login Gifts entry/card.
+- claim_button.png
+  - Active/claimable Login Gift button.
+  - Do not use a disabled/already-claimed button as the primary target.
+
+The routine must not depend on:
+
+- fixed coordinates;
+- OCR of reward amounts;
+- a fixed reward/day index;
+- hardcoded event-card positions;
+- assumptions about the current Login Gift reward;
+- web screenshots as production templates.
+
+All target coordinates come from Detector results.
+
+## Verification
+
+The routine verifies the claim action by rescanning the active Claim template.
+
+Success:
+- Events entry detected and opened;
+- Login Gifts entry detected and opened;
+- active Claim button detected;
+- Claim tap succeeds;
+- active Claim visual state is no longer detected.
+
+Failure:
+- any required template is missing;
+- any required target is not detected;
+- any tap fails;
+- the active Claim state remains visible after the claim.
+
+## Safety
+
+Missing templates must fail before any game interaction.
+
+Global popup safety remains owned by AutomationEngine / PopupManager.
+This routine does not duplicate popup handling.
+
+## Architecture
+
+AutomationEngine
+→ Global Popup Safety
+→ QuestManager
+→ ClaimLoginGiftRoutine
+→ ActionEngine
+→ Detector / Vision
+→ ADB
+
+## Asset rule
+
+Templates must be cropped from real LDPlayer screenshots.
+Do not invent production coordinates or use screenshots from search results
+as templates.
+
+## Current implementation status
+
+- QuestDefinition is registered to ClaimLoginGiftRoutine.
+- Routine skeleton and unit tests are implemented.
+- Real LDPlayer templates are still required before destructive/live execution.
+
+## Next step
+
+Using a current LDPlayer screenshot of the Login Gift flow:
+
+1. Crop Events entry template.
+2. Crop Login Gifts entry/card template.
+3. Crop active Claim button template.
+4. Put them under assets/login_gift/.
+5. Run the Quest #2 unit tests.
+6. Run a non-destructive detection test on the current screen.
+7. Live-test the full claim flow.
+8. Update this document with final live-tested parameters.
