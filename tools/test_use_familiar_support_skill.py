@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 import unittest
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -85,7 +85,10 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
 
             self.assertTrue(routine.run())
             action_engine.detect_all.assert_called_once()
-            action_engine.tap.assert_called_once_with(321, 234)
+            self.assertEqual(
+                action_engine.tap.call_args_list,
+                [call(50, 50), call(321, 234)],
+            )
             action_engine.swipe.assert_not_called()
             action_engine.wait.assert_called_once()
         finally:
