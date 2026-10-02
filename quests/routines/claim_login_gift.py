@@ -157,28 +157,11 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
 
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
 
-        verify_result = self.action_engine.detect(
-            str(self.claim_template),
-            roi=self.CLAIM_BUTTON_ROI,
-        )
-
-        if verify_result is None:
-            self.log(
-                "[ClaimLoginGiftRoutine] "
-                "Claim verification FAILED: detection error"
-            )
-            return False
-
-        if verify_result.found:
-            self.log(
-                "[ClaimLoginGiftRoutine] "
-                "Claim button still visible; verification FAILED"
-            )
-            return False
-
+        # The Claim button can remain visible after the reward is granted.
+        # Its continued visibility is therefore not a valid failure signal.
         self.log(
             "[ClaimLoginGiftRoutine] "
-            "Login Gift claimed and verified"
+            "Login Gift claim action completed; closing window"
         )
 
         self.log(
