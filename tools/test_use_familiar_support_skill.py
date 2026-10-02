@@ -41,13 +41,58 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
 
             self.assertFalse(routine.run())
             action_engine.detect.assert_not_called()
+            action_engine.detect_all.assert_not_called()
             action_engine.tap.assert_not_called()
             action_engine.swipe.assert_not_called()
         finally:
             for path in (familiar, usable):
                 path.unlink(missing_ok=True)
 
-    def test_target_found_after_scroll_is_tapped_and_consumed(self):
+    def test_multiple_candidates_are_detected_and_first_is_used(self):
+        action_engine = Mock()
+        action_engine.tap.return_value = True
+        game_state = Mock()
+        logger = Mock()
+
+        root = Path(__file__).resolve().parent
+        familiar, usable = self._touch_templates(root)
+
+        candidates = [
+            SimpleNamespace(
+                found=True, center=(321, 234), confidence=0.97, width=40, height=20
+            ),
+            SimpleNamespace(
+                found=True, center=(321, 360), confidence=0.95, width=40, height=20
+            ),
+            SimpleNamespace(
+                found=True, center=(321, 486), confidence=0.93, width=40, height=20
+            ),
+        ]
+
+        action_engine.detect.return_value = SimpleNamespace(
+            found=True, center=(50, 50)
+        )
+        action_engine.detect_all.return_value = candidates
+
+        try:
+            routine = UseFamiliarSupportSkillRoutine(
+                action_engine=action_engine,
+                game_state=game_state,
+                logger=logger,
+                familiar_icon_template=familiar,
+                usable_skill_template=usable,
+            )
+
+            self.assertTrue(routine.run())
+            action_engine.detect_all.assert_called_once()
+            action_engine.tap.assert_called_once_with(321, 234)
+            action_engine.swipe.assert_not_called()
+            action_engine.wait.assert_called_once()
+        finally:
+            for path in (familiar, usable):
+                path.unlink(missing_ok=True)
+
+    def test_target_found_after_scroll_is_tapped(self):
         action_engine = Mock()
         action_engine.tap.return_value = True
         action_engine.swipe.return_value = True
@@ -60,18 +105,13 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
         target = SimpleNamespace(
             found=True, center=(321, 234), confidence=0.97, width=40, height=20
         )
-        verify = SimpleNamespace(
-            found=False, center=None, confidence=0.20, width=40, height=20
+
+        action_engine.detect.return_value = SimpleNamespace(
+            found=True, center=(50, 50)
         )
-        action_engine.detect.side_effect = [
-            # Open Familiar.
-            SimpleNamespace(found=True, center=(50, 50)),
-            # First Economy viewport: no usable skill.
-            SimpleNamespace(found=False, center=None, confidence=0.50, width=40, height=20),
-            # Second Economy viewport after swipe: usable skill found.
-            target,
-            # Post-tap ROI verification: target is gone.
-            verify,
+        action_engine.detect_all.side_effect = [
+            [],
+            [target],
         ]
 
         try:
@@ -89,14 +129,13 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
             action_engine.swipe.assert_called_once_with(
                 480, 430, 480, 190, duration=350
             )
-            action_engine.wait.assert_called()
+            self.assertEqual(action_engine.detect_all.call_count, 2)
         finally:
             for path in (familiar, usable):
                 path.unlink(missing_ok=True)
 
-    def test_found_target_is_tapped_and_consumed(self):
+    def test_no_usable_skill_in_any_viewport_fails(self):
         action_engine = Mock()
-        action_engine.tap.return_value = True
         action_engine.swipe.return_value = True
         game_state = Mock()
         logger = Mock()
@@ -104,17 +143,10 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
         root = Path(__file__).resolve().parent
         familiar, usable = self._touch_templates(root)
 
-        target = SimpleNamespace(
-            found=True, center=(123, 456), confidence=0.99, width=40, height=20
+        action_engine.detect.return_value = SimpleNamespace(
+            found=True, center=(50, 50)
         )
-        verify = SimpleNamespace(
-            found=False, center=None, confidence=0.20, width=40, height=20
-        )
-        action_engine.detect.side_effect = [
-            SimpleNamespace(found=True, center=(50, 50)),
-            target,
-            verify,
-        ]
+        action_engine.detect_all.return_value = []
 
         try:
             routine = UseFamiliarSupportSkillRoutine(
@@ -123,12 +155,12 @@ class TestUseFamiliarSupportSkillRoutine(unittest.TestCase):
                 logger=logger,
                 familiar_icon_template=familiar,
                 usable_skill_template=usable,
+                max_swipes=2,
             )
 
-            self.assertTrue(routine.run())
-            self.assertEqual(action_engine.tap.call_count, 2)
-            action_engine.swipe.assert_not_called()
-            action_engine.wait.assert_called()
+            self.assertFalse(routine.run())
+            self.assertEqual(action_engine.detect_all.call_count, 3)
+            self.assertEqual(action_engine.swipe.call_count, 2)
         finally:
             for path in (familiar, usable):
                 path.unlink(missing_ok=True)
