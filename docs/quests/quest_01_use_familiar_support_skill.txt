@@ -43,7 +43,7 @@ The exact templates and coordinates/ROIs must be created from real LDPlayer scre
 
 ## Scrolling strategy
 
-The Familiar panel requires a swipe to expose the relevant skill.
+The Familiar panel may require one or more swipes to expose a relevant Economy skill.
 The routine should:
 - scan before swiping when practical;
 - swipe the skill list;
@@ -90,8 +90,8 @@ Global popup safety remains owned by AutomationEngine / PopupManager; do not dup
 Using the supplied real LDPlayer screenshots:
 1. Crop the Familiar icon template.
 2. Crop an active Economy USE target template.
-3. Put the two templates under assets/familiar_support.
-5. Run the Quest #1 test suite.
+3. Put the two templates under assets/familiar_support/.
+4. Run the Quest #1 test suite.
 6. Live-test on LDPlayer.
 7. Adjust the swipe bounds/ROI only from live evidence.
 8. Update this document with final live-tested parameters.
