@@ -130,6 +130,35 @@ class ActionEngine:
 
         time.sleep(seconds)
 
+    def swipe(self, x1, y1, x2, y2, duration=300):
+        """
+        Swipe between two logical screen coordinates.
+
+        Quest/navigation routines use this instead of calling ADB
+        directly, keeping execution mechanics centralized.
+        """
+
+        self.log(
+            f"[ActionEngine] SWIPE "
+            f"({x1}, {y1}) -> ({x2}, {y2}) "
+            f"duration={duration}ms"
+        )
+
+        success = self.adb.swipe(
+            int(x1),
+            int(y1),
+            int(x2),
+            int(y2),
+            duration=int(duration),
+        )
+
+        if success:
+            self.log("[ActionEngine] SWIPE SUCCESS")
+        else:
+            self.log("[ActionEngine] SWIPE FAILED")
+
+        return success
+
     def screenshot(self):
         self.log(
             "[ActionEngine] SCREENSHOT"
@@ -143,7 +172,7 @@ class ActionEngine:
     # Vision
     # ---------------------------------------------------------
 
-    def detect(self, template_path):
+    def detect(self, template_path, roi=None):
         self.log(
             f"[ActionEngine] DETECT: {template_path}"
         )
@@ -159,6 +188,7 @@ class ActionEngine:
         result = self.detector.detect(
             image=image,
             template_path=template_path,
+            roi=roi,
         )
 
         self.last_screenshot = image
