@@ -183,7 +183,27 @@ class ClaimLoginGiftRoutine(BaseQuestRoutine):
 
         self.log(
             "[ClaimLoginGiftRoutine] "
-            "Login Gift window closed"
+            "Login Gift window closed; closing Events layer"
+        )
+
+        # The first X closes the Login Gift panel and returns to the
+        # Events/Login Gifts layer. A second X is required to return
+        # all the way to the Castle screen.
+        if not self.action_engine.tap(
+            *self.CLOSE_BUTTON_CENTER,
+            jitter=self.CLOSE_BUTTON_JITTER,
+        ):
+            self.log(
+                "[ClaimLoginGiftRoutine] "
+                "Events layer close TAP FAILED"
+            )
+            return False
+
+        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+
+        self.log(
+            "[ClaimLoginGiftRoutine] "
+            "Events layer closed; returned to Castle"
         )
         return True
 
