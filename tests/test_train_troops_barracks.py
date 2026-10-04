@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from quests.routines.train_troops_barracks import (
     TrainTroopsBarracksRoutine,
@@ -137,24 +137,29 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
         self.addCleanup(temp_dir.cleanup)
 
         action_engine = MagicMock()
-        action_engine.detect.side_effect = [
-            MagicMock(found=True, center=(660, 300), confidence=0.97),
-            MagicMock(found=True, center=(360, 300), confidence=0.96),
-        ]
+        action_engine.detect.return_value = MagicMock(
+            found=True, center=(360, 300), confidence=0.96
+        )
         action_engine.tap.return_value = True
 
         routine = self._make_routine(action_engine, paths)
 
-        self.assertTrue(routine._enter_quantity(800))
+        with patch(
+            "quests.routines.train_troops_barracks.random.randint",
+            side_effect=[650, 292],
+        ):
+            self.assertTrue(routine._enter_quantity(800))
         self.assertEqual(action_engine.tap.call_count, 5)
+        action_engine.tap.assert_any_call(650, 292)
+        action_engine.detect.assert_called_once()
 
     def test_grunt_card_accepts_strong_local_match_below_global_threshold(self):
         temp_dir, paths = self._make_templates()
         self.addCleanup(temp_dir.cleanup)
 
         action_engine = MagicMock()
-        action_engine.detect.return_value = MagicMock(
-            found=False,
+        action_engine.detect_with_threshold.return_value = MagicMock(
+            found=True,
             center=(210, 260),
             confidence=0.6466,
         )
@@ -170,9 +175,9 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
         self.addCleanup(temp_dir.cleanup)
 
         action_engine = MagicMock()
-        action_engine.detect.return_value = MagicMock(
+        action_engine.detect_with_threshold.return_value = MagicMock(
             found=False,
-            center=(210, 260),
+            center=None,
             confidence=0.40,
         )
 
@@ -187,13 +192,14 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
-            MagicMock(found=True, center=(210, 260), confidence=0.98),
-            MagicMock(found=True, center=(660, 300), confidence=0.97),
-            MagicMock(found=True, center=(360, 300), confidence=0.96),
             MagicMock(found=False, center=None, confidence=0.10),
             MagicMock(found=True, center=(820, 475), confidence=0.98),
             MagicMock(found=True, center=(600, 475), confidence=0.98),
+
         ]
+        action_engine.detect_with_threshold.return_value = MagicMock(
+            found=True, center=(210, 260), confidence=0.98
+        )
         action_engine.tap.return_value = True
 
         routine = self._make_routine(action_engine, paths)
@@ -207,13 +213,14 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
-            MagicMock(found=True, center=(210, 260), confidence=0.98),
-            MagicMock(found=True, center=(660, 300), confidence=0.97),
-            MagicMock(found=True, center=(360, 300), confidence=0.96),
             MagicMock(found=True, center=(580, 490), confidence=0.98),
             MagicMock(found=False, center=None, confidence=0.10),
             MagicMock(found=True, center=(600, 475), confidence=0.98),
+
         ]
+        action_engine.detect_with_threshold.return_value = MagicMock(
+            found=True, center=(210, 260), confidence=0.98
+        )
         action_engine.tap.return_value = True
 
         routine = self._make_routine(action_engine, paths)
@@ -227,13 +234,14 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
-            MagicMock(found=True, center=(210, 260), confidence=0.98),
-            MagicMock(found=True, center=(660, 300), confidence=0.97),
-            MagicMock(found=True, center=(360, 300), confidence=0.96),
             MagicMock(found=False, center=None, confidence=0.10),
             MagicMock(found=True, center=(820, 475), confidence=0.98),
             MagicMock(found=True, center=(600, 475), confidence=0.98),
+
         ]
+        action_engine.detect_with_threshold.return_value = MagicMock(
+            found=True, center=(210, 260), confidence=0.98
+        )
         action_engine.tap.return_value = True
 
         routine = self._make_routine(action_engine, paths)
