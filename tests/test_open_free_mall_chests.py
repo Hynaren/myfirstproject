@@ -68,7 +68,7 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
         self.assertEqual(action_engine.detect.call_count, 4)
         self.assertEqual(action_engine.tap.call_count, 4)
         self.assertEqual(action_engine.swipe.call_count, 1)
-        self.assertEqual(action_engine.wait.call_count, 4)
+        self.assertEqual(action_engine.wait.call_count, 5)
 
         first_tap = action_engine.tap.call_args_list[0]
         self.assertEqual(first_tap.args, (355, 67))
@@ -92,7 +92,7 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
 
         self.assertFalse(routine.run())
         self.assertEqual(action_engine.detect.call_count, 4)
-        self.assertEqual(action_engine.tap.call_count, 3)
+        self.assertEqual(action_engine.tap.call_count, 4)
 
     def test_chest_tap_failure_stops_before_verification(self):
         temp_dir, paths = self._make_templates()
@@ -104,14 +104,14 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
             MagicMock(found=True, center=(120, 275), confidence=0.98),
             MagicMock(found=True, center=(930, 485), confidence=0.97),
         ]
-        action_engine.tap.side_effect = [True, True, False]
+        action_engine.tap.side_effect = [True, True, True, False]
         action_engine.swipe.return_value = True
 
         routine = self._routine(action_engine, paths)
 
         self.assertFalse(routine.run())
         self.assertEqual(action_engine.detect.call_count, 3)
-        self.assertEqual(action_engine.tap.call_count, 3)
+        self.assertEqual(action_engine.tap.call_count, 4)
 
     def test_scrolls_until_chest_is_visible(self):
         temp_dir, paths = self._make_templates()
