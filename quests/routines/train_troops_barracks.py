@@ -11,16 +11,18 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
 
     DEFAULT_WAIT_SECONDS = 0.8
     CASTLE_SEARCH_SETTLE_SECONDS = 3.0
-    DEFAULT_SWIPE_DURATION = 450
+    DEFAULT_SWIPE_DURATION = 650
     MAX_CASTLE_SEARCH_STEPS = 8
 
     # Provisional Castle camera search gestures. These are not a Barracks
     # coordinate and must be tuned from live LDPlayer camera behavior.
     CASTLE_PAN_SWIPES = (
-        (480, 300, 250, 300),
-        (250, 300, 480, 300),
-        (480, 300, 480, 190),
-        (480, 190, 480, 300),
+        # Small, slow camera nudges. Avoid large swipes that can overshoot
+        # the Barracks area on the Castle map.
+        (480, 300, 360, 300),
+        (360, 300, 480, 300),
+        (480, 300, 480, 220),
+        (480, 220, 480, 300),
     )
 
     # The quantity keypad in the confirmed LDPlayer UI is fixed in layout.
