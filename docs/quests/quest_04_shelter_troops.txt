@@ -8,48 +8,62 @@ The target is 1 successful Shelter action.
 
 ## Confirmed LDPlayer flow
 
-The supplied real screenshots establish this flow:
-
 1. Start from the Castle.
 2. Search the Castle area for the Shelter building.
 3. The Shelter is not assumed to be at one fixed coordinate. The Castle
    viewport is panned and rescanned with a bounded search.
 4. Detect and tap the Shelter building.
 5. The game opens the Shelter duration dialog.
-6. The current account defaults to 1 hour. The routine may use the
-   currently selected/default duration; duration selection is not part of
-   the Daily Quest target.
-7. Confirm the dialog with OK.
+6. The current account defaults to 1 hour. Use the currently selected/default
+   duration; duration selection is not part of the Daily Quest target.
+7. Detect and tap the duration dialog OK button.
 8. The troop-selection screen opens.
-9. Determine whether troops are available.
-10. If the game displays the stable empty state
-    "You need to train more Troops at the Barracks.", stop safely and do
-    NOT press Shelter.
-11. If that empty state is absent, detect the Shelter action and tap it.
-12. Verify the active Shelter action is no longer present.
+9. Detect the account-independent empty-troop state.
+10. If the empty state is present, call the reusable troop-training hook.
+11. Re-check the empty state after training.
+12. If troops are available, detect and tap Shelter.
+13. Verify the Shelter action is no longer present.
 
 ## Critical troop availability rule
 
 Troop types and counts differ between accounts.
 
-Therefore the routine MUST NOT try to identify every troop type or require a
-specific troop template.
+The routine MUST NOT identify every troop type or require a specific troop
+template.
 
 The account-independent negative state is:
 
-> You need to train more Troops at the Barracks.
-
-This state means there are zero eligible troops for the Shelter action.
+"You need to train more Troops at the Barracks."
 
 Decision:
 
-- no_troops.png FOUND → NO TROOPS → abort safely
-- no_troops.png NOT FOUND → continue to detect the Shelter action
-- Shelter action missing → fail safely
-- Never press the Shelter button while no_troops.png is detected.
+- no_troops.png FOUND → NO TROOPS → request reusable training recovery.
+- Training hook unavailable/fails → abort safely.
+- Re-check no_troops.png after training.
+- no_troops.png still FOUND → abort safely.
+- no_troops.png NOT FOUND → continue to detect Shelter.
+- Shelter action missing → fail safely.
+- Never press Shelter while no_troops.png is detected.
 
-This is intentionally a negative-state strategy because it works across
-accounts with different troop compositions.
+## Reusable Train Troops integration
+
+The zero-troop recovery belongs conceptually to Daily Quest #18
+"Train troops in the Barracks".
+
+Quest #4 therefore exposes an optional ensure_troop_available hook instead of
+duplicating Barracks logic.
+
+The intended future flow is:
+
+Shelter → zero troops
+→ Quest #18 reusable Barracks flow
+→ train at least 1 Grunt
+→ return to Shelter flow
+→ re-check no_troops.png
+→ Shelter
+
+The exact Barracks navigation and Grunt training templates must be established
+from real LDPlayer screenshots before implementing Quest #18.
 
 ## Vision assets
 
@@ -57,6 +71,8 @@ Required production templates:
 
 - assets/shelter_troops/shelter_entry.png
   - Stable visual anchor for the Shelter building.
+- assets/shelter_troops/duration_ok.png
+  - OK button in the Shelter duration dialog.
 - assets/shelter_troops/no_troops.png
   - Crop of the stable empty-state message:
     "You need to train more Troops at the Barracks."
@@ -95,8 +111,9 @@ Success requires:
 
 - Shelter building detected;
 - Shelter building tap succeeds;
+- duration OK detected and tapped;
 - troop-selection screen reached;
-- no_troops.png is NOT detected;
+- no_troops.png is NOT detected after any required training recovery;
 - Shelter action detected;
 - Shelter action tap succeeds;
 - Shelter action is no longer detected after the action.
@@ -106,17 +123,18 @@ Failure includes:
 - Shelter not found after bounded Castle search;
 - any required template missing;
 - any navigation/action tap failure;
-- explicit no-troops state detected;
+- explicit no-troops state with failed/unavailable training recovery;
 - Shelter action not found;
 - Shelter action remains visible after the tap.
 
 ## Safety
 
 - Missing templates fail before any game interaction.
-- Explicit no-troops state is a hard stop.
+- Explicit no-troops state is a hard safety gate.
 - The routine never selects a troop type by name or assumes a troop count.
 - Global popup handling remains owned by AutomationEngine / PopupManager.
 - The routine does not talk directly to ADB.
+- Training recovery must succeed before Shelter is attempted again.
 
 ## Architecture
 
@@ -124,6 +142,7 @@ AutomationEngine
 → Global Popup Safety
 → QuestManager
 → ShelterTroopsRoutine
+→ optional TrainTroops recovery
 → ActionEngine
 → Detector / Vision
 → ADB
@@ -132,11 +151,15 @@ AutomationEngine
 
 - QuestDefinition is wired to ShelterTroopsRoutine.
 - Castle search with bounded panning is implemented.
+- Shelter duration OK confirmation is implemented.
 - Negative-state troop detection is implemented.
+- Optional reusable troop-training hook is implemented.
 - Unit tests cover:
   - missing assets;
   - successful Shelter flow;
   - explicit no-troops safety;
+  - training hook failure;
+  - training hook success and Shelter retry;
   - persistent Shelter action;
   - entry tap failure;
   - finding Shelter after a Castle pan;
@@ -147,15 +170,17 @@ AutomationEngine
 
 1. Crop shelter_entry.png from a real Castle screenshot.
 2. Crop no_troops.png from the supplied empty-state screenshot.
-3. Crop shelter_action.png from the troop-selection screenshot.
-4. Run Quest #4 unit tests.
-5. Run detect-only on the current LDPlayer.
-6. Live-test both branches:
+3. Crop duration_ok.png from the Shelter duration dialog.
+4. Crop shelter_action.png from the troop-selection screenshot.
+5. Run Quest #4 unit tests.
+6. Run detect-only on the current LDPlayer.
+7. Live-test both branches:
    - account with troops;
    - account with zero troops.
-7. Verify Global Popup Safety if any confirmation/reward popup appears.
-8. Tune Castle pan bounds from live evidence.
-9. Commit the validated Quest #4 checkpoint.
+8. Implement/wire Quest #18 Train Troops recovery using the same Barracks flow.
+9. Verify Global Popup Safety if any confirmation/reward popup appears.
+10. Tune Castle pan bounds from live evidence.
+11. Commit the validated Quest #4 checkpoint.
 
 ## Design rule
 
