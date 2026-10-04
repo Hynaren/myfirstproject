@@ -9,6 +9,7 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
     QUEST_ID = "open_free_mall_chests"
 
     DEFAULT_WAIT_SECONDS = 0.8
+    LEFT_MENU_SETTLE_SECONDS = 2.0
     DEFAULT_SWIPE_DURATION = 350
     MAX_CHEST_SCROLLS = 6
     MAX_LEFT_MENU_SWIPES = 2
@@ -123,7 +124,9 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
                 )
                 return False
 
-            self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+            # Give the Shop category rail enough time to fully stop
+            # before matching. A short delay can capture the list mid-scroll.
+            self.action_engine.wait(self.LEFT_MENU_SETTLE_SECONDS)
 
             result = self.action_engine.detect(
                 str(self.special_bundles_template)
