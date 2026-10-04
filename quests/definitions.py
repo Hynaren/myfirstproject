@@ -86,7 +86,16 @@ DAILY_QUEST_DEFINITIONS = (
     QuestDefinition("spend_energy_hunting_monsters", "Spend Energy by hunting Monsters on the Kingdom Map", "world", 18000, None),
     QuestDefinition("spend_sta_hero_stages", "Spend STA in Hero Stages", "hero", 160, None),
     QuestDefinition("battle_hero_colosseum", "Battle in the Hero Colosseum", "hero", 1, None),
-    QuestDefinition("train_troops_barracks", "Train troops in the Barracks", "castle", 800, None),
+    QuestDefinition(
+        "train_troops_barracks",
+        "Train troops in the Barracks",
+        "castle",
+        800,
+        __import__(
+            "quests.routines.train_troops_barracks",
+            fromlist=["TrainTroopsBarracksRoutine"],
+        ).TrainTroopsBarracksRoutine,
+    ),
     QuestDefinition("heal_wounded_troops_infirmary", "Heal wounded troops in the Infirmary", "castle", 50, None),
     QuestDefinition("gather_food", "Gather Food from Fields on the Kingdom Map", "world", 100000, None),
     QuestDefinition("gather_stones", "Gather Stones from Rocks on the Kingdom Map", "world", 100000, None),
