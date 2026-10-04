@@ -67,13 +67,16 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
 
         self.assertTrue(routine.run())
         self.assertEqual(action_engine.detect.call_count, 5)
-        self.assertEqual(action_engine.tap.call_count, 4)
+        self.assertEqual(action_engine.tap.call_count, 5)
         self.assertEqual(action_engine.swipe.call_count, 2)
-        self.assertEqual(action_engine.wait.call_count, 6)
+        self.assertEqual(action_engine.wait.call_count, 7)
 
         first_tap = action_engine.tap.call_args_list[0]
         self.assertEqual(first_tap.args, (355, 67))
         self.assertEqual(first_tap.kwargs["jitter"], 3)
+
+        last_tap = action_engine.tap.call_args_list[-1]
+        self.assertEqual(last_tap.args, (925, 33))
 
     def test_free_chest_remaining_after_claim_fails(self):
         temp_dir, paths = self._make_templates()
