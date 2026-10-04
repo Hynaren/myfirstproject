@@ -14,7 +14,9 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
     CASTLE_SEARCH_SETTLE_SECONDS = 3.0
     BARRACKS_OPEN_SETTLE_SECONDS = 2.5
     GRUNT_SELECT_SETTLE_SECONDS = 1.5
-    QUANTITY_SETTLE_SECONDS = 1.2
+    # The game can take a little longer to apply the requested quantity and
+    # refresh the Barracks action UI on slower accounts/devices.
+    QUANTITY_SETTLE_SECONDS = 2.5
     TRAIN_SETTLE_SECONDS = 1.5
     SPEED_UP_SETTLE_SECONDS = 1.5
     DEFAULT_SWIPE_DURATION = 650
