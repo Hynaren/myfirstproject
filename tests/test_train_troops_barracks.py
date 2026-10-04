@@ -145,7 +145,7 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
 
         routine = self._make_routine(action_engine, paths)
 
-        self.assertTrue(routine._enter_800())
+        self.assertTrue(routine._enter_quantity(800))
         self.assertEqual(action_engine.tap.call_count, 5)
 
     def test_train_800_without_shortage_then_speedup(self):
@@ -188,13 +188,22 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
         self.assertTrue(routine._train_800())
         self.assertEqual(action_engine.tap.call_count, 7)
 
-    def test_ensure_one_grunt_is_not_live_until_quantity_flow_is_parameterized(self):
+    def test_ensure_one_grunt_reuses_parameterized_quantity_flow(self):
         temp_dir, paths = self._make_templates()
         self.addCleanup(temp_dir.cleanup)
 
-        routine = self._make_routine(MagicMock(), paths)
+        action_engine = MagicMock()
+        action_engine.detect.side_effect = [
+            MagicMock(found=True, center=(210, 260), confidence=0.98),
+            MagicMock(found=True, center=(660, 300), confidence=0.97),
+            MagicMock(found=True, center=(360, 300), confidence=0.96),
+        ]
+        action_engine.tap.return_value = True
 
-        self.assertFalse(routine.ensure_one_grunt())
+        routine = self._make_routine(action_engine, paths)
+
+        self.assertTrue(routine.ensure_one_grunt())
+        self.assertEqual(action_engine.tap.call_count, 3)
 
 
 if __name__ == "__main__":
