@@ -17,7 +17,7 @@ class DetectionResult:
 
     @property
     def center(self):
-        if not self.found:
+        if self.x is None or self.y is None:
             return None
 
         return self.x, self.y
@@ -108,7 +108,7 @@ class Detector:
             template_height,
         )
 
-    def detect(self, image, template_path, roi=None):
+    def detect(self, image, template_path, roi=None, threshold=None):
         if image is None:
             self.log("[Detector] Input image is None.")
             return DetectionResult(found=False)
@@ -121,7 +121,13 @@ class Detector:
         if prepared is None:
             return DetectionResult(found=False)
 
-        search_image, offset_x, offset_y, template_width, template_height = prepared
+        (
+            search_image,
+            offset_x,
+            offset_y,
+            template_width,
+            template_height,
+        ) = prepared
 
         screen_gray = cv2.cvtColor(search_image, cv2.COLOR_BGR2GRAY)
         template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
@@ -141,13 +147,21 @@ class Detector:
         center_x = top_left_x + template_width // 2
         center_y = top_left_y + template_height // 2
 
+        effective_threshold = (
+            self.threshold if threshold is None else float(threshold)
+        )
+
         self.log(f"[Detector] Confidence: {confidence:.4f}")
 
-        if confidence < self.threshold:
+        if confidence < effective_threshold:
             self.log(
-                f"[Detector] NOT FOUND ({confidence:.4f} < {self.threshold:.2f})"
+                f"[Detector] NOT FOUND "
+                f"({confidence:.4f} < {effective_threshold:.2f})"
             )
-            return DetectionResult(found=False, confidence=confidence)
+            return DetectionResult(
+                found=False,
+                confidence=confidence,
+            )
 
         self.log(
             f"[Detector] FOUND center=({center_x}, {center_y}) "
