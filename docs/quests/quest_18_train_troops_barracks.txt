@@ -1,0 +1,115 @@
+# Daily Quest #18 — Train troops in the Barracks
+
+## Goal
+
+Complete the Daily Quest target: train 800 troops.
+
+## Design
+
+The routine searches the Castle for a Barracks using Vision. The Barracks may
+be outside the current viewport, so the routine uses bounded Castle panning
+and rescans after each pan.
+
+After opening Barracks:
+
+1. Detect the actual training UI.
+2. Select/queue troops according to the real UI.
+3. Monitor actual Daily Quest progress.
+4. If the game reports insufficient resources, enter the resource-shortage
+   recovery flow.
+5. Detect the visible resource options and select only validated options.
+6. Re-scan the shortage state after every selection.
+7. Continue training until actual quest progress reaches 800.
+
+## Resource shortage
+
+The resource-shortage branch is deliberately template-driven.
+
+Do not assume:
+
+- one fixed shortage popup;
+- one fixed resource;
+- one fixed resource button;
+- fixed coordinates;
+- that selecting one option always resolves the shortage.
+
+Required behavior:
+
+Train
+→ shortage appears
+→ detect resource options
+→ select available validated options
+→ re-scan shortage
+→ continue only when shortage is resolved.
+
+The exact resource choices must be established from real LDPlayer screenshots.
+
+## Training progress
+
+The game's Daily Quest progress is the source of truth.
+
+The routine has a troop_count_reader hook so Vision/UI progress extraction can
+be added without rewriting the training state machine.
+
+Do not infer 800 from a requested batch size alone.
+
+## Reuse by Quest #4
+
+Quest #4 Shelter Troops can call the reusable ensure_one_grunt() sub-flow
+from this routine when Shelter reports zero troops.
+
+The final Grunt selection must be validated from the real Barracks UI.
+
+## Production assets
+
+Initial contract:
+
+- assets/train_troops/barracks_entry.png
+- assets/train_troops/train_action.png
+- assets/train_troops/resource_shortage.png
+- assets/train_troops/resource_option_1.png
+- assets/train_troops/resource_option_2.png
+- assets/train_troops/resource_option_3.png
+
+These are not approved production templates until validated on LDPlayer.
+
+## Safety
+
+- Missing templates fail before interaction.
+- Castle search is bounded.
+- Resource shortage is explicitly re-checked after selection.
+- No fixed resource-option coordinates.
+- Actual quest progress is authoritative.
+- No troop-type assumption unless the game UI requires it.
+- Global PopupManager remains responsible for global popups.
+- Routine does not call ADB directly.
+
+## Current status
+
+The architecture, routine skeleton, tests, and QuestDefinition registration are
+in place.
+
+The following still require real LDPlayer evidence:
+
+- Barracks template;
+- exact troop-selection/quantity controls;
+- training confirmation;
+- resource-shortage UI;
+- resource option selection;
+- progress extraction;
+- exact one-Grunt recovery flow.
+
+## Live validation sequence
+
+1. Find Barracks on the current Castle.
+2. Open it and capture the initial training UI.
+3. Train a small test batch.
+4. Capture the shortage state by deliberately reaching insufficient
+   resources if necessary.
+5. Capture every resource option shown.
+6. Test each option and observe what resource is added/used.
+7. Capture the quantity/queue controls.
+8. Determine how the Daily Quest's 800 progress changes.
+9. Run the full 800-target flow.
+10. Validate ensure_one_grunt().
+11. Wire ensure_one_grunt() into Quest #4.
