@@ -4,70 +4,119 @@
 
 Complete the Daily Quest by sheltering troops once.
 
-The target is 1 shelter action.
+The target is 1 successful Shelter action.
 
-## Implementation status
+## Confirmed LDPlayer flow
 
-This is the first implementation pass.
+The supplied real screenshots establish this flow:
 
-The routine is intentionally conservative because the exact Shelter UI flow
-must be established from a current real LDPlayer screenshot before production
-coordinates, ROIs, or templates are committed.
+1. Start from the Castle.
+2. Search the Castle area for the Shelter building.
+3. The Shelter is not assumed to be at one fixed coordinate. The Castle
+   viewport is panned and rescanned with a bounded search.
+4. Detect and tap the Shelter building.
+5. The game opens the Shelter duration dialog.
+6. The current account defaults to 1 hour. The routine may use the
+   currently selected/default duration; duration selection is not part of
+   the Daily Quest target.
+7. Confirm the dialog with OK.
+8. The troop-selection screen opens.
+9. Determine whether troops are available.
+10. If the game displays the stable empty state
+    "You need to train more Troops at the Barracks.", stop safely and do
+    NOT press Shelter.
+11. If that empty state is absent, detect the Shelter action and tap it.
+12. Verify the active Shelter action is no longer present.
 
-Current implementation provides:
+## Critical troop availability rule
 
-1. Detect the Shelter entry using a real production template.
-2. Tap the detected Shelter entry.
-3. Wait for the Shelter interface.
-4. Detect the currently active Shelter action using a real production template.
-5. Tap the detected Shelter action.
-6. Re-scan the active Shelter action.
-7. Succeed only when the active Shelter visual is no longer detected.
+Troop types and counts differ between accounts.
 
-## Vision strategy
+Therefore the routine MUST NOT try to identify every troop type or require a
+specific troop template.
+
+The account-independent negative state is:
+
+> You need to train more Troops at the Barracks.
+
+This state means there are zero eligible troops for the Shelter action.
+
+Decision:
+
+- no_troops.png FOUND → NO TROOPS → abort safely
+- no_troops.png NOT FOUND → continue to detect the Shelter action
+- Shelter action missing → fail safely
+- Never press the Shelter button while no_troops.png is detected.
+
+This is intentionally a negative-state strategy because it works across
+accounts with different troop compositions.
+
+## Vision assets
 
 Required production templates:
 
 - assets/shelter_troops/shelter_entry.png
-  - Stable visual anchor for entering the Shelter interface.
+  - Stable visual anchor for the Shelter building.
+- assets/shelter_troops/no_troops.png
+  - Crop of the stable empty-state message:
+    "You need to train more Troops at the Barracks."
 - assets/shelter_troops/shelter_action.png
-  - Active action state that causes the selected/eligible troops to shelter.
+  - Active Shelter button on the troop-selection screen.
 
-These templates MUST be cropped from current real LDPlayer screenshots.
+All production templates must come from real LDPlayer screenshots.
 
 Do not use:
-
-- invented coordinates;
+- fixed Shelter coordinates;
+- troop-type-specific templates;
 - OCR;
-- web screenshots as production templates;
-- fixed troop counts;
-- fixed troop-type assumptions;
-- hardcoded reward/progress calculations.
+- web screenshots;
+- invented UI states.
 
-## Important validation point
+## Castle search strategy
 
-The current routine assumes that one detected Shelter action is sufficient
-to complete the Daily Quest target of 1.
+The Shelter building can be outside the current viewport.
 
-Before live execution, inspect the actual LDPlayer flow and confirm whether:
+The routine:
 
-- the Shelter entry opens a troop-selection screen;
-- troops must be selected before pressing Shelter;
-- the active action is a global Shelter button or a troop-row action;
-- the action visual disappears after success;
-- a confirmation popup appears after tapping Shelter.
+1. scans the current viewport;
+2. pans the Castle area;
+3. rescans;
+4. repeats only within a bounded number of search steps;
+5. fails safely if Shelter is not found.
 
-If troop selection or confirmation is required, this routine must be extended
-from the screenshot evidence rather than guessed.
+The current pan path is provisional and must be tuned only from live LDPlayer
+evidence if the game camera behaves differently.
+
+No Shelter target coordinate is hardcoded.
+
+## Verification
+
+Success requires:
+
+- Shelter building detected;
+- Shelter building tap succeeds;
+- troop-selection screen reached;
+- no_troops.png is NOT detected;
+- Shelter action detected;
+- Shelter action tap succeeds;
+- Shelter action is no longer detected after the action.
+
+Failure includes:
+
+- Shelter not found after bounded Castle search;
+- any required template missing;
+- any navigation/action tap failure;
+- explicit no-troops state detected;
+- Shelter action not found;
+- Shelter action remains visible after the tap.
 
 ## Safety
 
 - Missing templates fail before any game interaction.
-- All target coordinates come from Detector results.
-- The routine does not talk directly to ADB.
+- Explicit no-troops state is a hard stop.
+- The routine never selects a troop type by name or assumes a troop count.
 - Global popup handling remains owned by AutomationEngine / PopupManager.
-- If the active Shelter state remains visible after the action, the routine
-  fails instead of assuming completion.
+- The routine does not talk directly to ADB.
 
 ## Architecture
 
@@ -79,22 +128,37 @@ AutomationEngine
 → Detector / Vision
 → ADB
 
+## Current implementation status
+
+- QuestDefinition is wired to ShelterTroopsRoutine.
+- Castle search with bounded panning is implemented.
+- Negative-state troop detection is implemented.
+- Unit tests cover:
+  - missing assets;
+  - successful Shelter flow;
+  - explicit no-troops safety;
+  - persistent Shelter action;
+  - entry tap failure;
+  - finding Shelter after a Castle pan;
+  - bounded Castle search.
+- Real production templates still need to be committed.
+
 ## Next live step
 
-Using a current LDPlayer screenshot:
-
-1. Show the Castle screen with the Shelter entry visible.
-2. Show the Shelter interface after opening it.
-3. If troop selection is required, show the selectable troop state.
-4. Show the final Shelter action and the post-action state.
-5. Crop the smallest stable templates from those real screenshots.
-6. Run the Quest #4 unit tests.
-7. Run detect-only validation.
-8. Live-test the full flow.
-9. Update this document with the confirmed flow and final live-tested parameters.
+1. Crop shelter_entry.png from a real Castle screenshot.
+2. Crop no_troops.png from the supplied empty-state screenshot.
+3. Crop shelter_action.png from the troop-selection screenshot.
+4. Run Quest #4 unit tests.
+5. Run detect-only on the current LDPlayer.
+6. Live-test both branches:
+   - account with troops;
+   - account with zero troops.
+7. Verify Global Popup Safety if any confirmation/reward popup appears.
+8. Tune Castle pan bounds from live evidence.
+9. Commit the validated Quest #4 checkpoint.
 
 ## Design rule
 
-This document is the source of truth for the agreed Quest #4 workflow.
-When the real UI proves that the flow differs, update this document first,
-then update the routine and tests to match the evidence.
+The real LDPlayer screenshots are the source of truth. If the actual Shelter
+flow differs from this document, update this blueprint first, then change the
+routine and tests.
