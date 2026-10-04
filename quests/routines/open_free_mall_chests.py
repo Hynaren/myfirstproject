@@ -11,7 +11,7 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
     DEFAULT_WAIT_SECONDS = 0.8
     DEFAULT_SWIPE_DURATION = 350
     MAX_CHEST_SCROLLS = 6
-    MAX_LEFT_MENU_SWIPES = 4
+    MAX_LEFT_MENU_SWIPES = 2
 
     # The Castle shop shortcut is a fixed event-slot style button beside
     # the Solo shortcut. Its artwork changes, so coordinates are the stable
