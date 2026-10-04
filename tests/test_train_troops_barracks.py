@@ -205,7 +205,7 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
         routine = self._make_routine(action_engine, paths)
 
         self.assertTrue(routine._train(800))
-        self.assertEqual(action_engine.tap.call_count, 7)
+        self.assertEqual(action_engine.tap.call_count, 8)
 
     def test_train_800_with_shortage_uses_then_speedup(self):
         temp_dir, paths = self._make_templates()
@@ -226,7 +226,7 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
         routine = self._make_routine(action_engine, paths)
 
         self.assertTrue(routine._train(800))
-        self.assertEqual(action_engine.tap.call_count, 7)
+        self.assertEqual(action_engine.tap.call_count, 8)
 
     def test_ensure_one_grunt_reuses_parameterized_quantity_flow(self):
         temp_dir, paths = self._make_templates()
