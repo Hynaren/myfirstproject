@@ -23,6 +23,8 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
             "shortage": root / "resource_shortage.png",
             "use": root / "resource_use.png",
             "finish": root / "finish_now.png",
+            "auto_use": root / "auto_use.png",
+            "time_speed_use": root / "use_time_speed.png",
         }
 
         for path in paths.values():
@@ -42,6 +44,8 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
             resource_shortage_template=paths["shortage"],
             resource_use_template=paths["use"],
             finish_now_template=paths["finish"],
+            auto_use_template=paths["auto_use"],
+            time_speed_use_template=paths["time_speed_use"],
             **kwargs,
         )
 
@@ -58,6 +62,8 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
             resource_shortage_template="missing_shortage.png",
             resource_use_template="missing_use.png",
             finish_now_template="missing_finish.png",
+            auto_use_template="missing_auto_use.png",
+            time_speed_use_template="missing_use_time_speed.png",
         )
 
         self.assertFalse(routine.run())
@@ -196,6 +202,9 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
             MagicMock(found=True, center=(820, 475), confidence=0.98),
             MagicMock(found=True, center=(600, 475), confidence=0.98),
 
+            MagicMock(found=True, center=(700, 420), confidence=0.98),
+            MagicMock(found=True, center=(760, 420), confidence=0.98),
+
         ]
         action_engine.detect_with_threshold.return_value = MagicMock(
             found=True, center=(210, 260), confidence=0.98
@@ -205,7 +214,7 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
         routine = self._make_routine(action_engine, paths)
 
         self.assertTrue(routine._train(800))
-        self.assertEqual(action_engine.tap.call_count, 8)
+        self.assertEqual(action_engine.tap.call_count, 10)
 
     def test_train_800_with_shortage_uses_then_speedup(self):
         temp_dir, paths = self._make_templates()
@@ -247,7 +256,7 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
         routine = self._make_routine(action_engine, paths)
 
         self.assertTrue(routine.ensure_one_grunt())
-        self.assertEqual(action_engine.tap.call_count, 6)
+        self.assertEqual(action_engine.tap.call_count, 8)
 
 
 if __name__ == "__main__":
