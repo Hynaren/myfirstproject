@@ -19,8 +19,10 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
     SHOP_SHORTCUT_CENTER = (355, 67)
     SHOP_SHORTCUT_JITTER = 3
 
-    # Scroll the left category rail upward until Special Bundles is visible.
-    LEFT_MENU_SWIPE = (120, 420, 120, 180)
+    # Use a short, gentle swipe on the left category rail. Special Bundles
+    # sits relatively close to the current category view, so a long swipe
+    # can skip past it. Repeated short swipes are intentional.
+    LEFT_MENU_SWIPE = (120, 380, 120, 300)
 
     # Scroll the Best Sellers content downward (finger moves upward) so the
     # free chest near the bottom becomes visible.
@@ -102,8 +104,8 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
 
     def _open_special_bundles(self):
         # Special Bundles can be several positions below the initial Shop
-        # category view. Keep swiping the left rail upward until the target
-        # is visible, with a bounded maximum.
+        # category view. Keep using short swipes on the left rail until the
+        # target is visible, with a bounded maximum.
         for swipe_index in range(self.MAX_LEFT_MENU_SWIPES):
             self.log(
                 "[OpenFreeMallChestsRoutine] "
