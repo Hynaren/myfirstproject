@@ -10,7 +10,8 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
 
     DEFAULT_WAIT_SECONDS = 0.8
     DEFAULT_SWIPE_DURATION = 350
-    MAX_CHEST_SCROLLS = 2
+    MAX_CHEST_SCROLLS = 6
+    MAX_LEFT_MENU_SWIPES = 4
 
     # The Castle shop shortcut is a fixed event-slot style button beside
     # the Solo shortcut. Its artwork changes, so coordinates are the stable
@@ -100,51 +101,54 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
         return True
 
     def _open_special_bundles(self):
-        # One bounded upward scroll on the left rail exposes Special Bundles
-        # without depending on the current category position.
+        # Special Bundles can be several positions below the initial Shop
+        # category view. Keep swiping the left rail upward until the target
+        # is visible, with a bounded maximum.
+        for swipe_index in range(self.MAX_LEFT_MENU_SWIPES):
+            self.log(
+                "[OpenFreeMallChestsRoutine] "
+                f"Left category swipe "
+                f"{swipe_index + 1}/{self.MAX_LEFT_MENU_SWIPES}"
+            )
+
+            if not self.action_engine.swipe(
+                *self.LEFT_MENU_SWIPE,
+                duration=self.DEFAULT_SWIPE_DURATION,
+            ):
+                self.log(
+                    "[OpenFreeMallChestsRoutine] "
+                    "Special Bundles menu scroll FAILED"
+                )
+                return False
+
+            self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+
+            result = self.action_engine.detect(
+                str(self.special_bundles_template)
+            )
+
+            if result is not None and result.found:
+                self.log(
+                    "[OpenFreeMallChestsRoutine] "
+                    f"Special Bundles found at {result.center} "
+                    f"confidence={result.confidence:.4f}"
+                )
+
+                if not self.action_engine.tap(*result.center):
+                    self.log(
+                        "[OpenFreeMallChestsRoutine] "
+                        "Special Bundles TAP FAILED"
+                    )
+                    return False
+
+                self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+                return True
+
         self.log(
             "[OpenFreeMallChestsRoutine] "
-            "Scrolling left category rail toward Special Bundles"
+            "Special Bundles NOT FOUND after bounded left-menu scrolls"
         )
-
-        if not self.action_engine.swipe(
-            *self.LEFT_MENU_SWIPE,
-            duration=self.DEFAULT_SWIPE_DURATION,
-        ):
-            self.log(
-                "[OpenFreeMallChestsRoutine] "
-                "Special Bundles menu scroll FAILED"
-            )
-            return False
-
-        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
-
-        result = self.action_engine.detect(
-            str(self.special_bundles_template)
-        )
-
-        if result is None or not result.found:
-            self.log(
-                "[OpenFreeMallChestsRoutine] "
-                "Special Bundles NOT FOUND"
-            )
-            return False
-
-        self.log(
-            "[OpenFreeMallChestsRoutine] "
-            f"Special Bundles found at {result.center} "
-            f"confidence={result.confidence:.4f}"
-        )
-
-        if not self.action_engine.tap(*result.center):
-            self.log(
-                "[OpenFreeMallChestsRoutine] "
-                "Special Bundles TAP FAILED"
-            )
-            return False
-
-        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
-        return True
+        return False
 
     def _open_best_sellers(self):
         result = self.action_engine.detect(
@@ -191,8 +195,8 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
         return None
 
     def _scroll_to_free_chest(self):
-        # First scan catches the chest if the current Best Sellers position
-        # already exposes it. Otherwise use bounded upward finger swipes.
+        # Best Sellers may contain a long offer list. Keep swiping the
+        # right content area upward until the Free chest is exposed.
         for scroll_index in range(self.MAX_CHEST_SCROLLS + 1):
             self.log(
                 "[OpenFreeMallChestsRoutine] "
@@ -209,7 +213,8 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
 
             self.log(
                 "[OpenFreeMallChestsRoutine] "
-                "Free chest not visible; scrolling Best Sellers content"
+                "Free chest not visible; scrolling Best Sellers content "
+                f"toward end ({scroll_index + 1}/{self.MAX_CHEST_SCROLLS})"
             )
 
             if not self.action_engine.swipe(
