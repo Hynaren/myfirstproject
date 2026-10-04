@@ -10,6 +10,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
     TARGET_TROOPS = 800
 
     DEFAULT_WAIT_SECONDS = 0.8
+    CASTLE_SEARCH_SETTLE_SECONDS = 3.0
     DEFAULT_SWIPE_DURATION = 450
     MAX_CASTLE_SEARCH_STEPS = 8
 
@@ -153,7 +154,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
                 )
                 return None
 
-            self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+            self.action_engine.wait(self.CASTLE_SEARCH_SETTLE_SECONDS)
 
             result = self._find_barracks()
             if result is not None:
