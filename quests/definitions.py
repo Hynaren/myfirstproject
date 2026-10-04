@@ -53,7 +53,16 @@ DAILY_QUEST_DEFINITIONS = (
             fromlist=["ClaimLoginGiftRoutine"],
         ).ClaimLoginGiftRoutine,
     ),
-    QuestDefinition("open_free_mall_chests", "Open free Mall Chests", "castle", 1, None),
+    QuestDefinition(
+        "open_free_mall_chests",
+        "Open free Mall Chests",
+        "castle",
+        1,
+        __import__(
+            "quests.routines.open_free_mall_chests",
+            fromlist=["OpenFreeMallChestsRoutine"],
+        ).OpenFreeMallChestsRoutine,
+    ),
     QuestDefinition("shelter_troops", "Shelter troops", "castle", 1, None),
     QuestDefinition("use_emotes", "Use Emotes", "castle", 1, None),
     QuestDefinition("get_hero_medas_from_hero_stages", "Get Hero Medas from Hero Stages", "hero", 1, None),
