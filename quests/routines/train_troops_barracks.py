@@ -179,7 +179,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             )
             return False
 
-        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        self.action_engine.wait(self.BARRACKS_OPEN_SETTLE_SECONDS)
         return True
 
     def _select_grunt(self):
@@ -199,7 +199,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             )
             return False
 
-        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        self.action_engine.wait(self.GRUNT_SELECT_SETTLE_SECONDS)
         return True
 
     def _enter_quantity(self, quantity):
@@ -257,7 +257,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             )
             return False
 
-        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        self.action_engine.wait(self.QUANTITY_SETTLE_SECONDS)
         self.log(
             "[TrainTroopsBarracksRoutine] "
             f"Quantity entered: {quantity}"
@@ -344,7 +344,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             )
             return False
 
-        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        self.action_engine.wait(self.TRAIN_SETTLE_SECONDS)
         return True
 
     def _speed_up(self):
@@ -366,7 +366,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             )
             return False
 
-        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        self.action_engine.wait(self.SPEED_UP_SETTLE_SECONDS)
         return True
 
     def _train(self, quantity):
