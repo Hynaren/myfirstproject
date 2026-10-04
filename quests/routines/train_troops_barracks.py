@@ -4,20 +4,31 @@ from quests.base_routine import BaseQuestRoutine
 
 
 class TrainTroopsBarracksRoutine(BaseQuestRoutine):
-    """Daily Quest #18: train 800 troops through the Barracks."""
+    """Daily Quest #18: train exactly 800 Tier-1 Grunts."""
 
     QUEST_ID = "train_troops_barracks"
     TARGET_TROOPS = 800
+
     DEFAULT_WAIT_SECONDS = 0.8
     DEFAULT_SWIPE_DURATION = 450
     MAX_CASTLE_SEARCH_STEPS = 8
 
+    # Provisional Castle camera search gestures. These are not a Barracks
+    # coordinate and must be tuned from live LDPlayer camera behavior.
     CASTLE_PAN_SWIPES = (
         (480, 300, 250, 300),
         (250, 300, 480, 300),
         (480, 300, 480, 190),
         (480, 190, 480, 300),
     )
+
+    # The quantity keypad in the confirmed LDPlayer UI is fixed in layout.
+    # We only use these after visually confirming the keypad is open.
+    QUANTITY_KEYPAD = {
+        "8": (295, 260),
+        "0": (315, 405),
+        "confirm": (410, 405),
+    }
 
     def __init__(
         self,
@@ -26,10 +37,13 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         logger=None,
         popup_manager=None,
         barracks_template=None,
+        grunt_template=None,
+        quantity_field_template=None,
+        quantity_keypad_template=None,
         train_action_template=None,
-        shortage_template=None,
-        resource_option_templates=None,
-        troop_count_reader=None,
+        resource_shortage_template=None,
+        resource_use_template=None,
+        finish_now_template=None,
         max_castle_search_steps=MAX_CASTLE_SEARCH_STEPS,
     ):
         super().__init__(
@@ -48,26 +62,28 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         self.barracks_template = Path(
             barracks_template or asset_dir / "barracks_entry.png"
         )
+        self.grunt_template = Path(
+            grunt_template or asset_dir / "grunt_card.png"
+        )
+        self.quantity_field_template = Path(
+            quantity_field_template or asset_dir / "quantity_field.png"
+        )
+        self.quantity_keypad_template = Path(
+            quantity_keypad_template or asset_dir / "quantity_keypad.png"
+        )
         self.train_action_template = Path(
             train_action_template or asset_dir / "train_action.png"
         )
-        self.shortage_template = Path(
-            shortage_template or asset_dir / "resource_shortage.png"
+        self.resource_shortage_template = Path(
+            resource_shortage_template or asset_dir / "resource_shortage.png"
+        )
+        self.resource_use_template = Path(
+            resource_use_template or asset_dir / "resource_use.png"
+        )
+        self.finish_now_template = Path(
+            finish_now_template or asset_dir / "finish_now.png"
         )
 
-        self.resource_option_templates = tuple(
-            Path(path)
-            for path in (
-                resource_option_templates
-                or (
-                    asset_dir / "resource_option_1.png",
-                    asset_dir / "resource_option_2.png",
-                    asset_dir / "resource_option_3.png",
-                )
-            )
-        )
-
-        self.troop_count_reader = troop_count_reader
         self.max_castle_search_steps = max(
             0, int(max_castle_search_steps)
         )
@@ -84,9 +100,13 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
     def _templates_ready(self):
         required = (
             self.barracks_template,
+            self.grunt_template,
+            self.quantity_field_template,
+            self.quantity_keypad_template,
             self.train_action_template,
-            self.shortage_template,
-            *self.resource_option_templates,
+            self.resource_shortage_template,
+            self.resource_use_template,
+            self.finish_now_template,
         )
         return all(self._template_ready(path) for path in required)
 
@@ -159,32 +179,83 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
         return True
 
-    def _read_trained_count(self):
-        if self.troop_count_reader is None:
+    def _select_grunt(self):
+        result = self.action_engine.detect(str(self.grunt_template))
+
+        if result is None or not result.found:
             self.log(
                 "[TrainTroopsBarracksRoutine] "
-                "Troop count reader is not configured"
+                "Tier-1 Grunt NOT FOUND"
             )
-            return None
+            return False
 
-        count = self.troop_count_reader()
-        if count is None:
+        if not self.action_engine.tap(*result.center):
             self.log(
                 "[TrainTroopsBarracksRoutine] "
-                "Troop count reader returned no value"
+                "Grunt card TAP FAILED"
             )
-            return None
+            return False
 
-        count = max(0, int(count))
-        self.log(
-            f"[TrainTroopsBarracksRoutine] "
-            f"Current training progress={count}"
+        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        return True
+
+    def _enter_800(self):
+        field = self.action_engine.detect(
+            str(self.quantity_field_template)
         )
-        return count
+
+        if field is None or not field.found:
+            self.log(
+                "[TrainTroopsBarracksRoutine] "
+                "Quantity field NOT FOUND"
+            )
+            return False
+
+        if not self.action_engine.tap(*field.center):
+            self.log(
+                "[TrainTroopsBarracksRoutine] "
+                "Quantity field TAP FAILED"
+            )
+            return False
+
+        self.action_engine.wait(0.3)
+
+        keypad = self.action_engine.detect(
+            str(self.quantity_keypad_template)
+        )
+
+        if keypad is None or not keypad.found:
+            self.log(
+                "[TrainTroopsBarracksRoutine] "
+                "Quantity keypad NOT FOUND"
+            )
+            return False
+
+        for digit in ("8", "0", "0"):
+            if not self.action_engine.tap(
+                *self.QUANTITY_KEYPAD[digit]
+            ):
+                self.log(
+                    "[TrainTroopsBarracksRoutine] "
+                    f"Keypad {digit} TAP FAILED"
+                )
+                return False
+
+        if not self.action_engine.tap(
+            *self.QUANTITY_KEYPAD["confirm"]
+        ):
+            self.log(
+                "[TrainTroopsBarracksRoutine] "
+                "Quantity confirm TAP FAILED"
+            )
+            return False
+
+        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        return True
 
     def _detect_resource_shortage(self):
         result = self.action_engine.detect(
-            str(self.shortage_template)
+            str(self.resource_shortage_template)
         )
 
         if result is None:
@@ -202,34 +273,29 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             "Resource shortage detected"
         )
 
-        for path in self.resource_option_templates:
-            result = self.action_engine.detect(str(path))
+        result = self.action_engine.detect(
+            str(self.resource_use_template)
+        )
 
-            if result is None:
-                self.log(
-                    "[TrainTroopsBarracksRoutine] "
-                    f"Resource option detection failed: {path}"
-                )
-                return False
-
-            if not result.found:
-                continue
-
+        if result is None or not result.found:
             self.log(
                 "[TrainTroopsBarracksRoutine] "
-                f"Resource option found at {result.center} "
-                f"confidence={result.confidence:.4f}"
+                "Resource Use button NOT FOUND"
             )
+            return False
 
-            if not self.action_engine.tap(*result.center):
-                self.log(
-                    "[TrainTroopsBarracksRoutine] "
-                    f"Resource option TAP FAILED: {path}"
-                )
-                return False
+        if not self.action_engine.tap(*result.center):
+            self.log(
+                "[TrainTroopsBarracksRoutine] "
+                "Resource Use TAP FAILED"
+            )
+            return False
 
-            self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
 
+        # The confirmed game behavior is: Use automatically supplies the
+        # required resources and presses Train for us. Re-scan the shortage
+        # state instead of assuming that the operation succeeded.
         shortage_after = self._detect_resource_shortage()
 
         if shortage_after is None:
@@ -238,17 +304,17 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         if shortage_after:
             self.log(
                 "[TrainTroopsBarracksRoutine] "
-                "Resource shortage remains after resource selection"
+                "Resource shortage remains after Use"
             )
             return False
 
         self.log(
             "[TrainTroopsBarracksRoutine] "
-            "Resource shortage resolved"
+            "Resource shortage resolved by Use"
         )
         return True
 
-    def _start_training(self):
+    def _tap_train(self):
         result = self.action_engine.detect(
             str(self.train_action_template)
         )
@@ -256,58 +322,80 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         if result is None or not result.found:
             self.log(
                 "[TrainTroopsBarracksRoutine] "
-                "Train action NOT FOUND"
+                "Train button NOT FOUND"
             )
             return False
 
         if not self.action_engine.tap(*result.center):
             self.log(
                 "[TrainTroopsBarracksRoutine] "
-                "Train action TAP FAILED"
+                "Train TAP FAILED"
             )
             return False
 
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
         return True
 
-    def _train_until_target(self, target_count):
-        current = self._read_trained_count()
-        if current is None:
+    def _speed_up(self):
+        result = self.action_engine.detect(
+            str(self.finish_now_template)
+        )
+
+        if result is None or not result.found:
+            self.log(
+                "[TrainTroopsBarracksRoutine] "
+                "Finish Now / Speed Up NOT FOUND"
+            )
             return False
 
-        while current < target_count:
-            shortage = self._detect_resource_shortage()
+        if not self.action_engine.tap(*result.center):
+            self.log(
+                "[TrainTroopsBarracksRoutine] "
+                "Finish Now TAP FAILED"
+            )
+            return False
 
-            if shortage is None:
-                return False
-
-            if shortage and not self._resolve_resource_shortage():
-                return False
-
-            if not self._start_training():
-                return False
-
-            current = self._read_trained_count()
-            if current is None:
-                return False
-
-        self.log(
-            "[TrainTroopsBarracksRoutine] "
-            f"Target reached: {current}/{target_count}"
-        )
+        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
         return True
 
+    def _train_800(self):
+        if not self._select_grunt():
+            return False
+
+        if not self._enter_800():
+            return False
+
+        shortage = self._detect_resource_shortage()
+        if shortage is None:
+            return False
+
+        if shortage:
+            # Game's Use action supplies the missing resources and starts
+            # training automatically.
+            if not self._resolve_resource_shortage():
+                return False
+        else:
+            if not self._tap_train():
+                return False
+
+        return self._speed_up()
+
     def ensure_one_grunt(self):
+        """Reusable recovery hook for Shelter Troops.
+
+        The production version will use the same Barracks flow but request
+        the smallest valid Grunt quantity instead of 800.
+        """
         self.log(
             "[TrainTroopsBarracksRoutine] "
             "ensure_one_grunt START"
         )
-        return self._train_until_target(1)
+        return False
 
     def run(self):
         self.log(
             "[TrainTroopsBarracksRoutine] "
-            f"START target={self.TARGET_TROOPS}"
+            "START target=800"
         )
 
         if not self._templates_ready():
@@ -316,8 +404,11 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         if not self._open_barracks():
             return False
 
-        if not self._train_until_target(self.TARGET_TROOPS):
+        if not self._train_800():
             return False
 
-        self.log("[TrainTroopsBarracksRoutine] DONE")
+        self.log(
+            "[TrainTroopsBarracksRoutine] "
+            "DONE: 800 troops trained"
+        )
         return True
