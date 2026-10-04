@@ -74,6 +74,21 @@ class ShelterTroopsRoutineTest(unittest.TestCase):
         self.assertEqual(action_engine.wait.call_count, 3)
         action_engine.swipe.assert_not_called()
 
+    def test_default_training_hook_is_wired_from_quest_18(self):
+        temp_dir, paths = self._make_templates()
+        self.addCleanup(temp_dir.cleanup)
+
+        routine = self._make_routine(
+            MagicMock(),
+            paths,
+        )
+
+        self.assertTrue(callable(routine.ensure_troop_available))
+        self.assertEqual(
+            routine.ensure_troop_available.__self__.__class__.__name__,
+            "TrainTroopsBarracksRoutine",
+        )
+
     def test_no_troops_aborts_and_can_delegate_training(self):
         temp_dir, paths = self._make_templates()
         self.addCleanup(temp_dir.cleanup)
