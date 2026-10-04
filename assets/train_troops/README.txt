@@ -1,38 +1,45 @@
 # Quest #18 — Train Troops assets
 
-The quest target is 800 troops.
+Production templates confirmed from real LDPlayer screenshots:
 
-Required initial anchors:
+- grunt_card.png — Tier-1 Grunt card.
+- quantity_field.png — troop quantity field.
+- quantity_keypad.png — numeric keypad after opening quantity.
+- train_action.png — Train button.
+- resource_shortage.png — shortage dialog/header state.
+- resource_use.png — Use button in the Auto Use dialog.
+- finish_now.png — Finish Now / Speed Up button.
 
-- barracks_entry.png
-- train_action.png
-- resource_shortage.png
-- resource_option_1.png
-- resource_option_2.png
-- resource_option_3.png
+Still required:
 
-These names are implementation contracts only until real LDPlayer screenshots
-are validated.
+- barracks_entry.png — Barracks building in the Castle.
 
-## Resource shortage
+## Confirmed flow
 
-The game may offer multiple ways to add/use stored resources when training
-cannot proceed.
+Barracks
+→ Grunt
+→ quantity field
+→ numeric keypad
+→ 800
+→ confirm
+→ Train
 
-The routine must detect actual visible options rather than tapping fixed
-coordinates.
+If resource shortage appears:
 
-Each option must be validated from real LDPlayer evidence.
+shortage
+→ Use
+→ game auto-fills resources
+→ game auto-presses Train
+→ Finish Now
 
-## Reusable Grunt flow
+Do not press Train again after Use.
 
-Quest #4 can reuse Quest #18's training implementation to create at least
-one Grunt when Shelter has no eligible troops.
-
-The final Grunt selector/template will be added after inspecting Barracks.
-
-## Source rule
+## Asset source rule
 
 All production templates must come from real LDPlayer screenshots.
 
-Do not commit synthetic, web, or guessed UI templates.
+The current supplied screenshots are sufficient for every asset above except
+barracks_entry.png, because they show the inside of Barracks rather than the
+Barracks building in Castle.
+
+Do not create synthetic, web, or guessed templates.
