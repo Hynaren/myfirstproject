@@ -43,3 +43,17 @@ barracks_entry.png, because they show the inside of Barracks rather than the
 Barracks building in Castle.
 
 Do not create synthetic, web, or guessed templates.
+
+
+## Final speed-up board assets
+
+After Finish Now, the game opens the time-speed board:
+
+Finish Now -> Auto Use -> Use Time Speed
+
+Required production templates:
+
+- auto_use.png — Auto Use control on the speed-up board.
+- use_time_speed.png — Use Time Speed button on the speed-up board.
+
+Both controls are detected by Vision before tapping.
