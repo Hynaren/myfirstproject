@@ -63,7 +63,16 @@ DAILY_QUEST_DEFINITIONS = (
             fromlist=["OpenFreeMallChestsRoutine"],
         ).OpenFreeMallChestsRoutine,
     ),
-    QuestDefinition("shelter_troops", "Shelter troops", "castle", 1, None),
+    QuestDefinition(
+        "shelter_troops",
+        "Shelter troops",
+        "castle",
+        1,
+        __import__(
+            "quests.routines.shelter_troops",
+            fromlist=["ShelterTroopsRoutine"],
+        ).ShelterTroopsRoutine,
+    ),
     QuestDefinition("use_emotes", "Use Emotes", "castle", 1, None),
     QuestDefinition("get_hero_medas_from_hero_stages", "Get Hero Medas from Hero Stages", "hero", 1, None),
     QuestDefinition("construct_or_upgrade_buildings", "Construct or upgrade buildings", "castle", 1, None),
