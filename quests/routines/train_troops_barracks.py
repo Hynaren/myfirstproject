@@ -1,4 +1,5 @@
 from pathlib import Path
+import random
 
 from quests.base_routine import BaseQuestRoutine
 
@@ -19,6 +20,8 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
     DEFAULT_SWIPE_DURATION = 650
     MAX_CASTLE_SEARCH_STEPS = 8
     GRUNT_DETECT_MIN_CONFIDENCE = 0.60
+    QUANTITY_FIELD_X_RANGE = (623, 687)
+    QUANTITY_FIELD_Y_RANGE = (286, 300)
 
     CASTLE_PAN_SWIPES = (
         (480, 300, 360, 300),
@@ -67,7 +70,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
     def _templates_ready(self):
         return all(self._template_ready(path) for path in (
             self.barracks_template, self.grunt_template,
-            self.quantity_field_template, self.quantity_keypad_template,
+            self.quantity_keypad_template,
             self.train_action_template, self.resource_shortage_template,
             self.resource_use_template, self.finish_now_template,
         ))
@@ -149,16 +152,19 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             self.log("[TrainTroopsBarracksRoutine] Invalid quantity")
             return False
 
-        field = self.action_engine.detect(str(self.quantity_field_template))
-        if field is None or not field.found:
-            self.log("[TrainTroopsBarracksRoutine] Quantity field NOT FOUND")
-            return False
-
-        if not self.action_engine.tap(*field.center):
+        quantity_point = (
+            random.randint(*self.QUANTITY_FIELD_X_RANGE),
+            random.randint(*self.QUANTITY_FIELD_Y_RANGE),
+        )
+        self.log(
+            "[TrainTroopsBarracksRoutine] "
+            f"Quantity field fixed-area TAP at {quantity_point}"
+        )
+        if not self.action_engine.tap(*quantity_point):
             self.log("[TrainTroopsBarracksRoutine] Quantity field TAP FAILED")
             return False
 
-        self.action_engine.wait(0.3)
+        self.action_engine.wait(0.8)
 
         keypad = self.action_engine.detect(str(self.quantity_keypad_template))
         if keypad is None or not keypad.found:
