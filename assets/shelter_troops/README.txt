@@ -7,6 +7,8 @@ Required assets:
 
 - shelter_entry.png
   - Shelter building visual used while searching/panning around Castle.
+- duration_ok.png
+  - OK button in the Shelter duration-selection dialog.
 - no_troops.png
   - Account-independent negative-state message:
     "You need to train more Troops at the Barracks."
@@ -23,12 +25,16 @@ The stable empty-state message is the reliable cross-account signal.
 If no_troops.png is detected:
 
 - there are no eligible troops;
-- the routine must stop;
-- the Shelter button must NOT be pressed.
+- the Shelter action must not be pressed;
+- Quest #4 may invoke the reusable Train Troops recovery hook;
+- after recovery, the empty state must be checked again.
 
-The supplied LDPlayer empty-state screenshot was used to identify the crop
-candidate for no_troops.png. The production asset still needs to be placed
-in this directory and validated by the real Detector.
+## Train Troops reuse
+
+The actual Barracks navigation and one-Grunt training flow belongs to
+Daily Quest #18 "Train troops in the Barracks".
+
+Quest #4 should call that reusable flow rather than duplicate its UI logic.
 
 ## Asset source rule
 
@@ -40,6 +46,3 @@ Do not commit:
 - web screenshots;
 - synthetic UI;
 - troop-type-specific assumptions.
-
-The Castle search itself uses bounded panning, so the Shelter building does
-not need a fixed coordinate.
