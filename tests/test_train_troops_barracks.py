@@ -3,7 +3,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from quests.routines.train_troops_barracks import TrainTroopsBarracksRoutine
+from quests.routines.train_troops_barracks import (
+    TrainTroopsBarracksRoutine,
+)
 
 
 class TrainTroopsBarracksRoutineTest(unittest.TestCase):
@@ -14,11 +16,13 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
 
         paths = {
             "barracks": root / "barracks_entry.png",
+            "grunt": root / "grunt_card.png",
+            "quantity": root / "quantity_field.png",
+            "keypad": root / "quantity_keypad.png",
             "train": root / "train_action.png",
             "shortage": root / "resource_shortage.png",
-            "resource_1": root / "resource_option_1.png",
-            "resource_2": root / "resource_option_2.png",
-            "resource_3": root / "resource_option_3.png",
+            "use": root / "resource_use.png",
+            "finish": root / "finish_now.png",
         }
 
         for path in paths.values():
@@ -31,13 +35,13 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
             action_engine=action_engine,
             game_state=MagicMock(),
             barracks_template=paths["barracks"],
+            grunt_template=paths["grunt"],
+            quantity_field_template=paths["quantity"],
+            quantity_keypad_template=paths["keypad"],
             train_action_template=paths["train"],
-            shortage_template=paths["shortage"],
-            resource_option_templates=(
-                paths["resource_1"],
-                paths["resource_2"],
-                paths["resource_3"],
-            ),
+            resource_shortage_template=paths["shortage"],
+            resource_use_template=paths["use"],
+            finish_now_template=paths["finish"],
             **kwargs,
         )
 
@@ -47,9 +51,13 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
             action_engine=action_engine,
             game_state=MagicMock(),
             barracks_template="missing_barracks.png",
+            grunt_template="missing_grunt.png",
+            quantity_field_template="missing_quantity.png",
+            quantity_keypad_template="missing_keypad.png",
             train_action_template="missing_train.png",
-            shortage_template="missing_shortage.png",
-            resource_option_templates=("missing_resource.png",),
+            resource_shortage_template="missing_shortage.png",
+            resource_use_template="missing_use.png",
+            finish_now_template="missing_finish.png",
         )
 
         self.assertFalse(routine.run())
@@ -92,16 +100,13 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
         self.assertEqual(action_engine.detect.call_count, 3)
         self.assertEqual(action_engine.swipe.call_count, 2)
 
-    def test_resource_shortage_resolves_only_after_rescan(self):
+    def test_shortage_uses_game_use_button_and_rescans(self):
         temp_dir, paths = self._make_templates()
         self.addCleanup(temp_dir.cleanup)
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
-            MagicMock(found=True, center=(100, 100), confidence=0.95),
-            MagicMock(found=True, center=(200, 100), confidence=0.94),
-            MagicMock(found=False, center=None, confidence=0.10),
-            MagicMock(found=True, center=(300, 100), confidence=0.93),
+            MagicMock(found=True, center=(580, 490), confidence=0.97),
             MagicMock(found=False, center=None, confidence=0.10),
         ]
         action_engine.tap.return_value = True
@@ -109,19 +114,17 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
         routine = self._make_routine(action_engine, paths)
 
         self.assertTrue(routine._resolve_resource_shortage())
-        self.assertEqual(action_engine.tap.call_count, 2)
+        self.assertEqual(action_engine.tap.call_count, 1)
+        self.assertEqual(action_engine.detect.call_count, 2)
 
-    def test_resource_shortage_remaining_causes_failure(self):
+    def test_shortage_remaining_after_use_fails(self):
         temp_dir, paths = self._make_templates()
         self.addCleanup(temp_dir.cleanup)
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
-            MagicMock(found=True, center=(100, 100), confidence=0.95),
-            MagicMock(found=False, center=None, confidence=0.10),
-            MagicMock(found=False, center=None, confidence=0.10),
-            MagicMock(found=True, center=(300, 100), confidence=0.93),
-            MagicMock(found=True, center=(300, 100), confidence=0.92),
+            MagicMock(found=True, center=(580, 490), confidence=0.97),
+            MagicMock(found=True, center=(580, 490), confidence=0.92),
         ]
         action_engine.tap.return_value = True
 
@@ -129,47 +132,69 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
 
         self.assertFalse(routine._resolve_resource_shortage())
 
-    def test_train_target_uses_count_reader(self):
+    def test_enter_800_uses_confirmed_keypad_sequence(self):
         temp_dir, paths = self._make_templates()
         self.addCleanup(temp_dir.cleanup)
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
-            MagicMock(found=False, center=None, confidence=0.10),
-            MagicMock(found=True, center=(500, 450), confidence=0.96),
+            MagicMock(found=True, center=(660, 300), confidence=0.97),
+            MagicMock(found=True, center=(360, 300), confidence=0.96),
         ]
         action_engine.tap.return_value = True
 
-        counts = iter([0, 800])
+        routine = self._make_routine(action_engine, paths)
 
-        routine = self._make_routine(
-            action_engine, paths,
-            troop_count_reader=lambda: next(counts),
-        )
+        self.assertTrue(routine._enter_800())
+        self.assertEqual(action_engine.tap.call_count, 5)
 
-        self.assertTrue(routine._train_until_target(800))
-        self.assertEqual(action_engine.tap.call_count, 1)
-
-    def test_ensure_one_grunt_reuses_training_flow(self):
+    def test_train_800_without_shortage_then_speedup(self):
         temp_dir, paths = self._make_templates()
         self.addCleanup(temp_dir.cleanup)
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
-            MagicMock(found=False, center=None, confidence=0.10),
-            MagicMock(found=True, center=(500, 450), confidence=0.96),
+            MagicMock(found=True, center=(210, 260), confidence=0.98),  # grunt
+            MagicMock(found=True, center=(660, 300), confidence=0.97),  # quantity
+            MagicMock(found=True, center=(360, 300), confidence=0.96),  # keypad
+            MagicMock(found=False, center=None, confidence=0.10),       # shortage
+            MagicMock(found=True, center=(820, 475), confidence=0.98),  # train
+            MagicMock(found=True, center=(600, 475), confidence=0.98),  # finish
         ]
         action_engine.tap.return_value = True
 
-        counts = iter([0, 1])
+        routine = self._make_routine(action_engine, paths)
 
-        routine = self._make_routine(
-            action_engine, paths,
-            troop_count_reader=lambda: next(counts),
-        )
+        self.assertTrue(routine._train_800())
+        self.assertEqual(action_engine.tap.call_count, 7)
 
-        self.assertTrue(routine.ensure_one_grunt())
-        self.assertEqual(action_engine.tap.call_count, 1)
+    def test_train_800_with_shortage_uses_then_speedup(self):
+        temp_dir, paths = self._make_templates()
+        self.addCleanup(temp_dir.cleanup)
+
+        action_engine = MagicMock()
+        action_engine.detect.side_effect = [
+            MagicMock(found=True, center=(210, 260), confidence=0.98),
+            MagicMock(found=True, center=(660, 300), confidence=0.97),
+            MagicMock(found=True, center=(360, 300), confidence=0.96),
+            MagicMock(found=True, center=(580, 490), confidence=0.98),
+            MagicMock(found=False, center=None, confidence=0.10),
+            MagicMock(found=True, center=(600, 475), confidence=0.98),
+        ]
+        action_engine.tap.return_value = True
+
+        routine = self._make_routine(action_engine, paths)
+
+        self.assertTrue(routine._train_800())
+        self.assertEqual(action_engine.tap.call_count, 7)
+
+    def test_ensure_one_grunt_is_not_live_until_quantity_flow_is_parameterized(self):
+        temp_dir, paths = self._make_templates()
+        self.addCleanup(temp_dir.cleanup)
+
+        routine = self._make_routine(MagicMock(), paths)
+
+        self.assertFalse(routine.ensure_one_grunt())
 
 
 if __name__ == "__main__":
