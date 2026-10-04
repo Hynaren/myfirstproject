@@ -20,6 +20,9 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
     SHOP_SHORTCUT_CENTER = (355, 67)
     SHOP_SHORTCUT_JITTER = 3
 
+    # Shop close button (X) at the top-right corner.
+    SHOP_CLOSE_CENTER = (925, 33)
+
     # Use a short, gentle swipe on the left category rail. Special Bundles
     # sits relatively close to the current category view, so a long swipe
     # can skip past it. Repeated short swipes are intentional.
@@ -97,6 +100,21 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
         ):
             self.log(
                 "[OpenFreeMallChestsRoutine] Shop shortcut TAP FAILED"
+            )
+            return False
+
+        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        return True
+
+    def _close_shop(self):
+        self.log(
+            "[OpenFreeMallChestsRoutine] "
+            f"Closing Shop at {self.SHOP_CLOSE_CENTER}"
+        )
+
+        if not self.action_engine.tap(*self.SHOP_CLOSE_CENTER):
+            self.log(
+                "[OpenFreeMallChestsRoutine] Shop close X TAP FAILED"
             )
             return False
 
@@ -294,6 +312,9 @@ class OpenFreeMallChestsRoutine(BaseQuestRoutine):
             return False
 
         if not self._claim_free_chest(chest):
+            return False
+
+        if not self._close_shop():
             return False
 
         self.log("[OpenFreeMallChestsRoutine] DONE")
