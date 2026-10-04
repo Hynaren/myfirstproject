@@ -5,9 +5,23 @@
 Complete the Daily Quest by opening one currently free Mall chest.
 The quest target is 1 chest.
 
-## Implementation baseline
+## Confirmed LDPlayer flow
 
-Quest #3 follows the same architecture used by Quest #1 and Quest #2:
+The supplied live screenshots establish this navigation:
+
+1. From Castle, tap the **Shop shortcut beside the Solo shortcut**.
+2. The Shop shortcut uses the same fixed event-slot Y position as Solo.
+   Current 960x540 baseline: approximately (355, 67).
+3. Swipe **up on the left category rail** to bring **Special Bundles** into view.
+4. Detect and tap **Special Bundles**.
+5. Detect and tap **Best Sellers**.
+6. Swipe **up on the right Best Sellers content area** to scroll the offers down.
+7. Detect the **Free** chest.
+8. Tap the detected chest.
+9. Re-scan the active Free-chest visual. Quest succeeds only when that
+   active/free visual is no longer present.
+
+## Architecture
 
 AutomationEngine
 → Global Popup Safety
@@ -17,70 +31,60 @@ AutomationEngine
 → Detector / Vision
 → ADB
 
-The routine does not talk directly to ADB and does not put quest logic
-inside main_window.py.
+The routine does not talk directly to ADB.
 
-## Confirmed execution flow
+## Vision assets
 
-1. Detect the Mall entry using a real in-game template.
-2. Tap the detected Mall entry.
-3. Wait for the Mall UI.
-4. Detect the currently free chest using a real in-game template.
-5. Tap the detected free chest.
-6. Wait for the result.
-7. Re-scan the active free-chest template.
-8. The quest succeeds only when the active free-chest visual is no longer found.
+Required production templates:
 
-No production coordinates are invented in the routine.
-
-## Vision strategy
-
-Required templates:
-
-- assets/mall_chests/mall.png
-  - Stable Mall entry visual from a real LDPlayer screenshot.
+- assets/mall_chests/special_bundles.png
+  - Special Bundles entry in the left category rail.
+- assets/mall_chests/best_sellers.png
+  - Best Sellers entry after Special Bundles is expanded.
 - assets/mall_chests/free_chest.png
-  - Active/free chest visual that represents the chest which can be opened.
+  - The active Free chest visual used for both target detection and
+    post-claim verification.
 
-Do not use:
+The Shop shortcut itself is intentionally **not** template-matched because
+its artwork changes with the active event/shortcut. Its fixed shortcut slot
+is the navigation contract.
 
-- web screenshots as production templates;
-- OCR for reward amounts;
-- fixed chest coordinates;
-- a fixed chest/day index;
-- an already-opened/disabled chest as the primary target.
+## Scroll strategy
 
-The active free-chest template is also the verification anchor.
+Left rail:
+- bounded upward swipe from (120, 420) to (120, 180).
+
+Right Best Sellers content:
+- bounded upward finger swipe from (820, 440) to (820, 180).
+- routine permits up to two content scrolls and scans before each scroll.
+
+No chest coordinate is hardcoded.
 
 ## Safety
 
-Missing templates fail before any interaction.
-
-Global popup handling remains owned by AutomationEngine / PopupManager.
-The routine does not duplicate popup handling.
-
-If the free chest remains visually active after the tap, the routine fails
-rather than assuming that the quest completed.
+- Missing production templates fail before any game interaction.
+- Global popup handling remains owned by AutomationEngine / PopupManager.
+- The routine does not duplicate popup handling.
+- If the Free chest remains active after the claim tap, the quest fails
+  instead of assuming completion.
+- No OCR, web screenshot, or invented chest coordinate is used.
 
 ## Current implementation status
 
 - QuestDefinition is wired to OpenFreeMallChestsRoutine.
-- Routine skeleton is implemented.
-- Unit tests cover missing assets, successful open+verify, persistent chest
-  state, and chest tap failure.
-- Real LDPlayer templates are still required before live execution.
+- Shop → Special Bundles → Best Sellers → scroll → Free chest flow is coded.
+- Unit tests cover missing assets, successful flow, persistent chest state,
+  tap failure, and bounded scrolling.
+- Production templates still need to be committed after validation against
+  the supplied/current LDPlayer screenshots.
 
 ## Next live step
 
-Use a current LDPlayer screenshot of the Mall flow to crop:
+Create/crop the three Vision templates from the supplied LDPlayer screenshots,
+place them under assets/mall_chests/, then:
 
-1. the stable Mall entry visual;
-2. the active/free chest visual.
-
-Place them under:
-
-assets/mall_chests/mall.png
-assets/mall_chests/free_chest.png
-
-Then run unit tests, perform non-destructive detection on the current screen,
-and only after detection passes, live-test the full quest.
+1. run Quest #3 unit tests;
+2. run detect-only for Special Bundles / Best Sellers / Free chest;
+3. live-test the full flow;
+4. verify Global Popup Safety handles any reward/purchase popup;
+5. commit the Quest #3 checkpoint.
