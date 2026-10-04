@@ -1,0 +1,100 @@
+# Daily Quest #4 — Shelter troops
+
+## Goal
+
+Complete the Daily Quest by sheltering troops once.
+
+The target is 1 shelter action.
+
+## Implementation status
+
+This is the first implementation pass.
+
+The routine is intentionally conservative because the exact Shelter UI flow
+must be established from a current real LDPlayer screenshot before production
+coordinates, ROIs, or templates are committed.
+
+Current implementation provides:
+
+1. Detect the Shelter entry using a real production template.
+2. Tap the detected Shelter entry.
+3. Wait for the Shelter interface.
+4. Detect the currently active Shelter action using a real production template.
+5. Tap the detected Shelter action.
+6. Re-scan the active Shelter action.
+7. Succeed only when the active Shelter visual is no longer detected.
+
+## Vision strategy
+
+Required production templates:
+
+- assets/shelter_troops/shelter_entry.png
+  - Stable visual anchor for entering the Shelter interface.
+- assets/shelter_troops/shelter_action.png
+  - Active action state that causes the selected/eligible troops to shelter.
+
+These templates MUST be cropped from current real LDPlayer screenshots.
+
+Do not use:
+
+- invented coordinates;
+- OCR;
+- web screenshots as production templates;
+- fixed troop counts;
+- fixed troop-type assumptions;
+- hardcoded reward/progress calculations.
+
+## Important validation point
+
+The current routine assumes that one detected Shelter action is sufficient
+to complete the Daily Quest target of 1.
+
+Before live execution, inspect the actual LDPlayer flow and confirm whether:
+
+- the Shelter entry opens a troop-selection screen;
+- troops must be selected before pressing Shelter;
+- the active action is a global Shelter button or a troop-row action;
+- the action visual disappears after success;
+- a confirmation popup appears after tapping Shelter.
+
+If troop selection or confirmation is required, this routine must be extended
+from the screenshot evidence rather than guessed.
+
+## Safety
+
+- Missing templates fail before any game interaction.
+- All target coordinates come from Detector results.
+- The routine does not talk directly to ADB.
+- Global popup handling remains owned by AutomationEngine / PopupManager.
+- If the active Shelter state remains visible after the action, the routine
+  fails instead of assuming completion.
+
+## Architecture
+
+AutomationEngine
+→ Global Popup Safety
+→ QuestManager
+→ ShelterTroopsRoutine
+→ ActionEngine
+→ Detector / Vision
+→ ADB
+
+## Next live step
+
+Using a current LDPlayer screenshot:
+
+1. Show the Castle screen with the Shelter entry visible.
+2. Show the Shelter interface after opening it.
+3. If troop selection is required, show the selectable troop state.
+4. Show the final Shelter action and the post-action state.
+5. Crop the smallest stable templates from those real screenshots.
+6. Run the Quest #4 unit tests.
+7. Run detect-only validation.
+8. Live-test the full flow.
+9. Update this document with the confirmed flow and final live-tested parameters.
+
+## Design rule
+
+This document is the source of truth for the agreed Quest #4 workflow.
+When the real UI proves that the flow differs, update this document first,
+then update the routine and tests to match the evidence.
