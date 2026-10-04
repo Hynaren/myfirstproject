@@ -4,7 +4,7 @@ from quests.base_routine import BaseQuestRoutine
 
 
 class TrainTroopsBarracksRoutine(BaseQuestRoutine):
-    """Daily Quest #18: train exactly 800 Tier-1 Grunts."""
+    """Daily Quest #18: train exactly 800 Grunts."""
 
     QUEST_ID = "train_troops_barracks"
     TARGET_TROOPS = 800
@@ -19,19 +19,18 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
     DEFAULT_SWIPE_DURATION = 650
     MAX_CASTLE_SEARCH_STEPS = 8
 
-    # Provisional Castle camera search gestures. These are not a Barracks
-    # coordinate and must be tuned from live LDPlayer camera behavior.
+    # The Grunt card is a visual anchor only. It is intentionally less strict
+    # than the global 0.80 detector threshold because the card can vary
+    # slightly between Barracks UI states/accounts.
+    GRUNT_DETECT_MIN_CONFIDENCE = 0.60
+
     CASTLE_PAN_SWIPES = (
-        # Small, slow camera nudges. Avoid large swipes that can overshoot
-        # the Barracks area on the Castle map.
         (480, 300, 360, 300),
         (360, 300, 480, 300),
         (480, 300, 480, 220),
         (480, 220, 480, 300),
     )
 
-    # The quantity keypad in the confirmed LDPlayer UI is fixed in layout.
-    # We only use these after visually confirming the keypad is open.
     QUANTITY_KEYPAD = {
         "1": (295, 260), "2": (361, 260), "3": (427, 260),
         "4": (295, 309), "5": (361, 309), "6": (427, 309),
@@ -192,12 +191,37 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
     def _select_grunt(self):
         result = self.action_engine.detect(str(self.grunt_template))
 
-        if result is None or not result.found:
+        if result is None:
             self.log(
                 "[TrainTroopsBarracksRoutine] "
-                "Tier-1 Grunt NOT FOUND"
+                "Grunt card detection FAILED"
             )
             return False
+
+        # ActionEngine uses the global 0.80 threshold, but the Grunt card
+        # is a deliberately local visual anchor. Accept a strong-enough
+        # match here when the global detector reports NOT FOUND.
+        if not result.found:
+            if result.confidence < self.GRUNT_DETECT_MIN_CONFIDENCE:
+                self.log(
+                    "[TrainTroopsBarracksRoutine] "
+                    "Grunt card NOT FOUND "
+                    f"confidence={result.confidence:.4f} "
+                    f"(minimum={self.GRUNT_DETECT_MIN_CONFIDENCE:.2f})"
+                )
+                return False
+
+            self.log(
+                "[TrainTroopsBarracksRoutine] "
+                "Grunt card accepted below global threshold: "
+                f"confidence={result.confidence:.4f}"
+            )
+
+        self.log(
+            "[TrainTroopsBarracksRoutine] "
+            f"Grunt card found at {result.center} "
+            f"confidence={result.confidence:.4f}"
+        )
 
         if not self.action_engine.tap(*result.center):
             self.log(
@@ -311,9 +335,6 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
 
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
 
-        # The confirmed game behavior is: Use automatically supplies the
-        # required resources and presses Train for us. Re-scan the shortage
-        # state instead of assuming that the operation succeeded.
         shortage_after = self._detect_resource_shortage()
 
         if shortage_after is None:
@@ -388,8 +409,6 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             return False
 
         if shortage:
-            # Game's Use action supplies the missing resources and starts
-            # training automatically.
             if not self._resolve_resource_shortage():
                 return False
         else:
@@ -405,7 +424,6 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             "ensure_one_grunt START"
         )
         return self._train(1)
-
 
     def run(self):
         self.log(
