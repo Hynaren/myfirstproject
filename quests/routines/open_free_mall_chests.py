@@ -1,7 +1,9 @@
 from pathlib import Path
 
+from quests.base_routine import BaseQuestRoutine
 
-class OpenFreeMallChestsRoutine:
+
+class OpenFreeMallChestsRoutine(BaseQuestRoutine):
     """Daily Quest #3: open one currently free Mall chest."""
 
     QUEST_ID = "open_free_mall_chests"
@@ -33,10 +35,12 @@ class OpenFreeMallChestsRoutine:
         best_sellers_template=None,
         free_chest_template=None,
     ):
-        self.action_engine = action_engine
-        self.game_state = game_state
-        self.logger = logger
-        self.popup_manager = popup_manager
+        super().__init__(
+            action_engine=action_engine,
+            game_state=game_state,
+            logger=logger,
+            popup_manager=popup_manager,
+        )
 
         asset_dir = (
             Path(__file__).resolve().parents[2]
