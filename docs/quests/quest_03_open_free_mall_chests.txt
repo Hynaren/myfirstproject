@@ -1,0 +1,86 @@
+# Daily Quest #3 — Open free Mall Chests
+
+## Goal
+
+Complete the Daily Quest by opening one currently free Mall chest.
+The quest target is 1 chest.
+
+## Implementation baseline
+
+Quest #3 follows the same architecture used by Quest #1 and Quest #2:
+
+AutomationEngine
+→ Global Popup Safety
+→ QuestManager
+→ OpenFreeMallChestsRoutine
+→ ActionEngine
+→ Detector / Vision
+→ ADB
+
+The routine does not talk directly to ADB and does not put quest logic
+inside main_window.py.
+
+## Confirmed execution flow
+
+1. Detect the Mall entry using a real in-game template.
+2. Tap the detected Mall entry.
+3. Wait for the Mall UI.
+4. Detect the currently free chest using a real in-game template.
+5. Tap the detected free chest.
+6. Wait for the result.
+7. Re-scan the active free-chest template.
+8. The quest succeeds only when the active free-chest visual is no longer found.
+
+No production coordinates are invented in the routine.
+
+## Vision strategy
+
+Required templates:
+
+- assets/mall_chests/mall.png
+  - Stable Mall entry visual from a real LDPlayer screenshot.
+- assets/mall_chests/free_chest.png
+  - Active/free chest visual that represents the chest which can be opened.
+
+Do not use:
+
+- web screenshots as production templates;
+- OCR for reward amounts;
+- fixed chest coordinates;
+- a fixed chest/day index;
+- an already-opened/disabled chest as the primary target.
+
+The active free-chest template is also the verification anchor.
+
+## Safety
+
+Missing templates fail before any interaction.
+
+Global popup handling remains owned by AutomationEngine / PopupManager.
+The routine does not duplicate popup handling.
+
+If the free chest remains visually active after the tap, the routine fails
+rather than assuming that the quest completed.
+
+## Current implementation status
+
+- QuestDefinition is wired to OpenFreeMallChestsRoutine.
+- Routine skeleton is implemented.
+- Unit tests cover missing assets, successful open+verify, persistent chest
+  state, and chest tap failure.
+- Real LDPlayer templates are still required before live execution.
+
+## Next live step
+
+Use a current LDPlayer screenshot of the Mall flow to crop:
+
+1. the stable Mall entry visual;
+2. the active/free chest visual.
+
+Place them under:
+
+assets/mall_chests/mall.png
+assets/mall_chests/free_chest.png
+
+Then run unit tests, perform non-destructive detection on the current screen,
+and only after detection passes, live-test the full quest.
