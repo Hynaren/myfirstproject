@@ -54,6 +54,7 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
+            MagicMock(found=False, confidence=0.20),
             MagicMock(found=True, center=(120, 175), confidence=0.99),
             MagicMock(found=True, center=(120, 275), confidence=0.98),
             MagicMock(found=True, center=(930, 485), confidence=0.97),
@@ -65,10 +66,10 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
         routine = self._routine(action_engine, paths)
 
         self.assertTrue(routine.run())
-        self.assertEqual(action_engine.detect.call_count, 4)
+        self.assertEqual(action_engine.detect.call_count, 5)
         self.assertEqual(action_engine.tap.call_count, 4)
-        self.assertEqual(action_engine.swipe.call_count, 1)
-        self.assertEqual(action_engine.wait.call_count, 5)
+        self.assertEqual(action_engine.swipe.call_count, 2)
+        self.assertEqual(action_engine.wait.call_count, 6)
 
         first_tap = action_engine.tap.call_args_list[0]
         self.assertEqual(first_tap.args, (355, 67))
