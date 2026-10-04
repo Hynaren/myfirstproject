@@ -46,6 +46,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         quantity_field_template=None, quantity_keypad_template=None,
         train_action_template=None, resource_shortage_template=None,
         resource_use_template=None, finish_now_template=None,
+        auto_use_template=None, time_speed_use_template=None,
         max_castle_search_steps=MAX_CASTLE_SEARCH_STEPS,
     ):
         super().__init__(
@@ -61,6 +62,8 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         self.resource_shortage_template = Path(resource_shortage_template or asset_dir / "resource_shortage.png")
         self.resource_use_template = Path(resource_use_template or asset_dir / "resource_use.png")
         self.finish_now_template = Path(finish_now_template or asset_dir / "finish_now.png")
+        self.auto_use_template = Path(auto_use_template or asset_dir / "auto_use.png")
+        self.time_speed_use_template = Path(time_speed_use_template or asset_dir / "use_time_speed.png")
         self.max_castle_search_steps = max(0, int(max_castle_search_steps))
 
     def _template_ready(self, path):
@@ -75,6 +78,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             self.quantity_keypad_template,
             self.train_action_template, self.resource_shortage_template,
             self.resource_use_template, self.finish_now_template,
+            self.auto_use_template, self.time_speed_use_template,
         ))
 
     def _find_barracks(self):
@@ -237,7 +241,29 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         if not self.action_engine.tap(*result.center):
             self.log("[TrainTroopsBarracksRoutine] Finish Now TAP FAILED")
             return False
+
         self.action_engine.wait(self.SPEED_UP_SETTLE_SECONDS)
+
+        auto_use = self.action_engine.detect(str(self.auto_use_template))
+        if auto_use is None or not auto_use.found:
+            self.log("[TrainTroopsBarracksRoutine] Auto Use button NOT FOUND")
+            return False
+        if not self.action_engine.tap(*auto_use.center):
+            self.log("[TrainTroopsBarracksRoutine] Auto Use TAP FAILED")
+            return False
+
+        self.action_engine.wait(self.SPEED_UP_SETTLE_SECONDS)
+
+        use_time_speed = self.action_engine.detect(str(self.time_speed_use_template))
+        if use_time_speed is None or not use_time_speed.found:
+            self.log("[TrainTroopsBarracksRoutine] Use Time Speed button NOT FOUND")
+            return False
+        if not self.action_engine.tap(*use_time_speed.center):
+            self.log("[TrainTroopsBarracksRoutine] Use Time Speed TAP FAILED")
+            return False
+
+        self.action_engine.wait(self.SPEED_UP_SETTLE_SECONDS)
+        self.log("[TrainTroopsBarracksRoutine] Speed-up board completed")
         return True
 
     def _train(self, quantity):
