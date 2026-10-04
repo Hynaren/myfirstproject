@@ -38,6 +38,8 @@ class ShelterTroopsRoutine(BaseQuestRoutine):
         shelter_entry_template=None,
         no_troops_template=None,
         shelter_action_template=None,
+        duration_ok_template=None,
+        ensure_troop_available=None,
         max_castle_search_steps=MAX_CASTLE_SEARCH_STEPS,
     ):
         super().__init__(
@@ -65,6 +67,14 @@ class ShelterTroopsRoutine(BaseQuestRoutine):
             shelter_action_template
             or asset_dir / "shelter_action.png"
         )
+        self.duration_ok_template = Path(
+            duration_ok_template
+            or asset_dir / "duration_ok.png"
+        )
+
+        # Optional integration hook. Quest #18 will eventually provide the
+        # reusable Barracks -> train one Grunt flow.
+        self.ensure_troop_available = ensure_troop_available
 
         self.max_castle_search_steps = max(
             0, int(max_castle_search_steps)
@@ -84,6 +94,7 @@ class ShelterTroopsRoutine(BaseQuestRoutine):
             self._template_ready(self.shelter_entry_template)
             and self._template_ready(self.no_troops_template)
             and self._template_ready(self.shelter_action_template)
+            and self._template_ready(self.duration_ok_template)
         )
 
     def _find_shelter(self):
@@ -158,6 +169,34 @@ class ShelterTroopsRoutine(BaseQuestRoutine):
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
         return True
 
+    def _confirm_shelter_duration(self):
+        """Confirm the currently selected Shelter duration."""
+
+        result = self.action_engine.detect(
+            str(self.duration_ok_template)
+        )
+
+        if result is None or not result.found:
+            self.log(
+                "[ShelterTroopsRoutine] Shelter duration OK NOT FOUND"
+            )
+            return False
+
+        self.log(
+            "[ShelterTroopsRoutine] "
+            f"Shelter duration OK found at {result.center} "
+            f"confidence={result.confidence:.4f}"
+        )
+
+        if not self.action_engine.tap(*result.center):
+            self.log(
+                "[ShelterTroopsRoutine] Shelter duration OK TAP FAILED"
+            )
+            return False
+
+        self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        return True
+
     def _has_no_troops(self):
         """Return True only for the stable empty-troop state."""
 
@@ -196,13 +235,47 @@ class ShelterTroopsRoutine(BaseQuestRoutine):
             return False
 
         if no_troops:
-            # Critical safety rule: never press Shelter when the game
-            # explicitly says that more troops must be trained.
+            # Critical safety rule: never press Shelter while the game
+            # explicitly reports zero eligible troops.
             self.log(
                 "[ShelterTroopsRoutine] "
-                "Shelter aborted safely: no troops available"
+                "NO TROOPS detected; requesting reusable troop-training hook"
             )
-            return False
+
+            if self.ensure_troop_available is None:
+                self.log(
+                    "[ShelterTroopsRoutine] "
+                    "No troop-training hook configured; abort safely"
+                )
+                return False
+
+            if not self.ensure_troop_available():
+                self.log(
+                    "[ShelterTroopsRoutine] "
+                    "Troop-training hook FAILED"
+                )
+                return False
+
+            self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+
+            # Re-check the negative state after training. We still never
+            # press Shelter if the game explicitly says zero troops.
+            no_troops_after_training = self._has_no_troops()
+
+            if no_troops_after_training is None:
+                return False
+
+            if no_troops_after_training:
+                self.log(
+                    "[ShelterTroopsRoutine] "
+                    "Still NO TROOPS after training; abort safely"
+                )
+                return False
+
+            self.log(
+                "[ShelterTroopsRoutine] "
+                "Troop availability restored; continuing Shelter"
+            )
 
         result = self.action_engine.detect(
             str(self.shelter_action_template),
@@ -265,6 +338,9 @@ class ShelterTroopsRoutine(BaseQuestRoutine):
             return False
 
         if not self._open_shelter():
+            return False
+
+        if not self._confirm_shelter_duration():
             return False
 
         if not self._shelter_troops():
