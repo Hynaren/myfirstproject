@@ -2,114 +2,158 @@
 
 ## Goal
 
-Complete the Daily Quest target: train 800 troops.
+Complete the Daily Quest target by training **800 troops**.
 
-## Design
+The confirmed implementation uses Tier-1 Grunt because Tier 1 is always present
+in the Barracks UI and the supplied account has Grunt available.
 
-The routine searches the Castle for a Barracks using Vision. The Barracks may
-be outside the current viewport, so the routine uses bounded Castle panning
-and rescans after each pan.
+## Confirmed Barracks flow
 
-After opening Barracks:
+1. Start from Castle.
+2. Search the Castle area for a Barracks.
+3. Pan and rescan within a bounded number of search steps.
+4. Open Barracks.
+5. Select the Tier-1 Grunt card.
+6. Tap the quantity field.
+7. Confirm that the numeric keypad is open.
+8. Enter exactly 800 using the keypad.
+9. Confirm the quantity.
+10. Detect the Train button.
+11. If resources are sufficient, tap Train.
+12. If the game shows the resource-shortage dialog, tap its Use button.
+13. The confirmed behavior is that Use automatically supplies the required
+    resources and presses Train for us.
+14. Detect Finish Now and tap it to speed up the training.
+15. Verify the training state after Finish Now.
 
-1. Detect the actual training UI.
-2. Select/queue troops according to the real UI.
-3. Monitor actual Daily Quest progress.
-4. If the game reports insufficient resources, enter the resource-shortage
-   recovery flow.
-5. Detect the visible resource options and select only validated options.
-6. Re-scan the shortage state after every selection.
-7. Continue training until actual quest progress reaches 800.
+## Tier / troop selection
+
+The Barracks screen can contain five troop columns per tier and multiple
+tiers. The account may have different unlocked tiers.
+
+The routine does not need to scroll through every troop type for Quest #18.
+It uses the always-present Tier-1 Grunt as the production target.
+
+This also gives Quest #4 a future reusable path:
+
+Shelter has no troops
+→ open Barracks
+→ select Grunt
+→ request a small validated quantity
+→ Train / resource Use
+→ return to Shelter.
+
+The one-Grunt path must be parameterized from the same training state machine;
+it must not duplicate Barracks logic.
+
+## Quantity entry
+
+The supplied LDPlayer screenshots confirm a numeric keypad after tapping the
+quantity field.
+
+The confirmed sequence for Quest #18 is:
+
+8 → 0 → 0 → confirm
+
+The keypad is visually confirmed before the digit taps are performed.
+
+No ADB text injection is required.
 
 ## Resource shortage
 
-The resource-shortage branch is deliberately template-driven.
+The supplied shortage screenshot confirms a dialog titled:
 
-Do not assume:
+Use to meet project requirements
 
-- one fixed shortage popup;
-- one fixed resource;
-- one fixed resource button;
-- fixed coordinates;
-- that selecting one option always resolves the shortage.
+It lists resource items under Auto Use and exposes a Use button.
 
-Required behavior:
+The confirmed behavior is:
 
 Train
-→ shortage appears
-→ detect resource options
-→ select available validated options
-→ re-scan shortage
-→ continue only when shortage is resolved.
+→ shortage dialog
+→ Use
+→ game automatically supplies the missing resources
+→ game automatically presses Train
+→ Finish Now / Speed Up
 
-The exact resource choices must be established from real LDPlayer screenshots.
+Therefore the routine must NOT independently press Train after Use.
 
-## Training progress
+It re-scans the shortage state after Use and continues to Finish Now only when
+the shortage has disappeared.
 
-The game's Daily Quest progress is the source of truth.
+No manual resource-item selection is needed for this confirmed flow.
 
-The routine has a troop_count_reader hook so Vision/UI progress extraction can
-be added without rewriting the training state machine.
+## Speed Up
 
-Do not infer 800 from a requested batch size alone.
+The confirmed training screen exposes Finish Now.
 
-## Reuse by Quest #4
+Quest #18 will use Finish Now to complete the queued 800 troop training rather
+than waiting for the displayed timer.
 
-Quest #4 Shelter Troops can call the reusable ensure_one_grunt() sub-flow
-from this routine when Shelter reports zero troops.
+The exact post-speed-up verification will be validated live.
 
-The final Grunt selection must be validated from the real Barracks UI.
+## Vision assets
 
-## Production assets
+Confirmed from real LDPlayer screenshots:
 
-Initial contract:
+- grunt_card.png
+- quantity_field.png
+- quantity_keypad.png
+- train_action.png
+- resource_shortage.png
+- resource_use.png
+- finish_now.png
 
-- assets/train_troops/barracks_entry.png
-- assets/train_troops/train_action.png
-- assets/train_troops/resource_shortage.png
-- assets/train_troops/resource_option_1.png
-- assets/train_troops/resource_option_2.png
-- assets/train_troops/resource_option_3.png
+Still required from a real Castle screenshot:
 
-These are not approved production templates until validated on LDPlayer.
+- barracks_entry.png
+
+The Barracks building cannot be inferred from the supplied inside-Barracks
+screenshots.
+
+## Castle search
+
+Barracks may be outside the current viewport.
+
+Use:
+
+scan → pan → scan → ... → bounded failure.
+
+No fixed Barracks coordinate is accepted as the final implementation.
+
+The pan gestures are provisional and must be tuned from live LDPlayer behavior.
 
 ## Safety
 
 - Missing templates fail before interaction.
 - Castle search is bounded.
-- Resource shortage is explicitly re-checked after selection.
-- No fixed resource-option coordinates.
-- Actual quest progress is authoritative.
-- No troop-type assumption unless the game UI requires it.
+- Numeric keypad is detected before digit input.
+- The routine does not press Train after resource Use because the game does
+  that automatically.
+- Finish Now is detected before speed-up.
+- No fixed resource-option coordinates are used.
 - Global PopupManager remains responsible for global popups.
 - Routine does not call ADB directly.
 
-## Current status
+## Current implementation status
 
-The architecture, routine skeleton, tests, and QuestDefinition registration are
-in place.
+The confirmed training state machine is implemented:
 
-The following still require real LDPlayer evidence:
+Castle search
+→ Barracks
+→ Grunt
+→ quantity 800
+→ Train OR resource Use
+→ Finish Now.
 
-- Barracks template;
-- exact troop-selection/quantity controls;
-- training confirmation;
-- resource-shortage UI;
-- resource option selection;
-- progress extraction;
-- exact one-Grunt recovery flow.
+Unit tests cover the confirmed branches.
 
-## Live validation sequence
+Live validation remains for:
 
-1. Find Barracks on the current Castle.
-2. Open it and capture the initial training UI.
-3. Train a small test batch.
-4. Capture the shortage state by deliberately reaching insufficient
-   resources if necessary.
-5. Capture every resource option shown.
-6. Test each option and observe what resource is added/used.
-7. Capture the quantity/queue controls.
-8. Determine how the Daily Quest's 800 progress changes.
-9. Run the full 800-target flow.
-10. Validate ensure_one_grunt().
-11. Wire ensure_one_grunt() into Quest #4.
+1. Barracks Castle search.
+2. Real template matching on LDPlayer.
+3. Full 800 training.
+4. Resource shortage branch.
+5. Finish Now result.
+6. Daily Quest progress reaching 800.
+7. Parameterized one-Grunt recovery for Quest #4.
