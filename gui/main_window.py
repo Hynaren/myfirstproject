@@ -344,6 +344,19 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.run_test_quest_button)
 
         # ==================================================
+        # RUN QUEST #3
+        # ==================================================
+        self.run_quest_3_button = QPushButton(
+            "Run Quest #3 - Open Free Mall Chests"
+        )
+        self.run_quest_3_button.setEnabled(False)
+        self.run_quest_3_button.clicked.connect(
+            self.run_quest_3
+        )
+
+        layout.addWidget(self.run_quest_3_button)
+
+        # ==================================================
         # DEBUG MODE
         # ==================================================
 
@@ -502,6 +515,7 @@ class MainWindow(QMainWindow):
             )
 
             self.run_test_quest_button.setEnabled(True)
+            self.run_quest_3_button.setEnabled(True)
 
             self.write_log(
                 f"ADB connected: "
@@ -1437,5 +1451,23 @@ class MainWindow(QMainWindow):
 
         self.write_log("================================")
 
+    def run_quest_3(self):
+        self.write_log("================================")
+        self.write_log("[GUI] Run Quest #3 - Open Free Mall Chests")
+
+        self.run_quest_3_button.setEnabled(False)
+
+        success = self.automation_engine.run_daily_quest(
+            "open_free_mall_chests"
+        )
+
+        if success:
+            self.write_log("[GUI] Quest #3 SUCCESS")
+        else:
+            self.write_log("[GUI] Quest #3 FAILED")
+
+        self.run_quest_3_button.setEnabled(True)
+
+        self.write_log("================================")
 
 
