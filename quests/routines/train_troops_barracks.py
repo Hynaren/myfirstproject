@@ -25,9 +25,11 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
     # The quantity keypad in the confirmed LDPlayer UI is fixed in layout.
     # We only use these after visually confirming the keypad is open.
     QUANTITY_KEYPAD = {
-        "8": (295, 260),
-        "0": (315, 405),
-        "confirm": (410, 405),
+        "1": (295, 260), "2": (361, 260), "3": (427, 260),
+        "4": (295, 309), "5": (361, 309), "6": (427, 309),
+        "7": (295, 358), "8": (361, 358), "9": (427, 358),
+        "0": (328, 406),
+        "confirm": (412, 406),
     }
 
     def __init__(
@@ -199,22 +201,24 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
         return True
 
-    def _enter_800(self):
+    def _enter_quantity(self, quantity):
+        quantity = int(quantity)
+        if quantity < 1:
+            self.log("[TrainTroopsBarracksRoutine] Invalid quantity")
+            return False
+
         field = self.action_engine.detect(
             str(self.quantity_field_template)
         )
-
         if field is None or not field.found:
             self.log(
-                "[TrainTroopsBarracksRoutine] "
-                "Quantity field NOT FOUND"
+                "[TrainTroopsBarracksRoutine] Quantity field NOT FOUND"
             )
             return False
 
         if not self.action_engine.tap(*field.center):
             self.log(
-                "[TrainTroopsBarracksRoutine] "
-                "Quantity field TAP FAILED"
+                "[TrainTroopsBarracksRoutine] Quantity field TAP FAILED"
             )
             return False
 
@@ -223,18 +227,21 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         keypad = self.action_engine.detect(
             str(self.quantity_keypad_template)
         )
-
         if keypad is None or not keypad.found:
             self.log(
-                "[TrainTroopsBarracksRoutine] "
-                "Quantity keypad NOT FOUND"
+                "[TrainTroopsBarracksRoutine] Quantity keypad NOT FOUND"
             )
             return False
 
-        for digit in ("8", "0", "0"):
-            if not self.action_engine.tap(
-                *self.QUANTITY_KEYPAD[digit]
-            ):
+        for digit in str(quantity):
+            point = self.QUANTITY_KEYPAD.get(digit)
+            if point is None:
+                self.log(
+                    "[TrainTroopsBarracksRoutine] "
+                    f"Unsupported keypad digit: {digit}"
+                )
+                return False
+            if not self.action_engine.tap(*point):
                 self.log(
                     "[TrainTroopsBarracksRoutine] "
                     f"Keypad {digit} TAP FAILED"
@@ -245,12 +252,15 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
             *self.QUANTITY_KEYPAD["confirm"]
         ):
             self.log(
-                "[TrainTroopsBarracksRoutine] "
-                "Quantity confirm TAP FAILED"
+                "[TrainTroopsBarracksRoutine] Quantity confirm TAP FAILED"
             )
             return False
 
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
+        self.log(
+            "[TrainTroopsBarracksRoutine] "
+            f"Quantity entered: {quantity}"
+        )
         return True
 
     def _detect_resource_shortage(self):
@@ -358,11 +368,11 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         self.action_engine.wait(self.DEFAULT_WAIT_SECONDS)
         return True
 
-    def _train_800(self):
+    def _train(self, quantity):
         if not self._select_grunt():
             return False
 
-        if not self._enter_800():
+        if not self._enter_quantity(quantity):
             return False
 
         shortage = self._detect_resource_shortage()
@@ -381,16 +391,13 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         return self._speed_up()
 
     def ensure_one_grunt(self):
-        """Reusable recovery hook for Shelter Troops.
-
-        The production version will use the same Barracks flow but request
-        the smallest valid Grunt quantity instead of 800.
-        """
+        """Train one Grunt for Quest #4 Shelter recovery."""
         self.log(
             "[TrainTroopsBarracksRoutine] "
             "ensure_one_grunt START"
         )
-        return False
+        return self._train(1)
+
 
     def run(self):
         self.log(
@@ -404,7 +411,7 @@ class TrainTroopsBarracksRoutine(BaseQuestRoutine):
         if not self._open_barracks():
             return False
 
-        if not self._train_800():
+        if not self._train(800):
             return False
 
         self.log(
