@@ -72,9 +72,23 @@ class ShelterTroopsRoutine(BaseQuestRoutine):
             or asset_dir / "duration_ok.png"
         )
 
-        # Optional integration hook. Quest #18 will eventually provide the
-        # reusable Barracks -> train one Grunt flow.
-        self.ensure_troop_available = ensure_troop_available
+        # Reuse Quest #18's Barracks training state machine when Shelter
+        # reports the account-independent NO TROOPS state. The explicit hook
+        # remains injectable for tests and future profile-specific behavior.
+        if ensure_troop_available is not None:
+            self.ensure_troop_available = ensure_troop_available
+        else:
+            from quests.routines.train_troops_barracks import (
+                TrainTroopsBarracksRoutine,
+            )
+
+            trainer = TrainTroopsBarracksRoutine(
+                action_engine=action_engine,
+                game_state=game_state,
+                logger=logger,
+                popup_manager=popup_manager,
+            )
+            self.ensure_troop_available = trainer.ensure_one_grunt
 
         self.max_castle_search_steps = max(
             0, int(max_castle_search_steps)
