@@ -113,7 +113,7 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
         routine = self._routine(action_engine, paths)
 
         self.assertFalse(routine.run())
-        self.assertEqual(action_engine.detect.call_count, 3)
+        self.assertEqual(action_engine.detect.call_count, 4)
         self.assertEqual(action_engine.tap.call_count, 4)
 
     def test_scrolls_until_chest_is_visible(self):
