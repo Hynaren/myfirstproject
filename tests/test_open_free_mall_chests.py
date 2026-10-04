@@ -81,6 +81,7 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
+            MagicMock(found=False, confidence=0.20),
             MagicMock(found=True, center=(120, 175), confidence=0.99),
             MagicMock(found=True, center=(120, 275), confidence=0.98),
             MagicMock(found=True, center=(930, 485), confidence=0.97),
@@ -92,7 +93,7 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
         routine = self._routine(action_engine, paths)
 
         self.assertFalse(routine.run())
-        self.assertEqual(action_engine.detect.call_count, 4)
+        self.assertEqual(action_engine.detect.call_count, 5)
         self.assertEqual(action_engine.tap.call_count, 4)
 
     def test_chest_tap_failure_stops_before_verification(self):
@@ -101,6 +102,7 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
+            MagicMock(found=False, confidence=0.20),
             MagicMock(found=True, center=(120, 175), confidence=0.99),
             MagicMock(found=True, center=(120, 275), confidence=0.98),
             MagicMock(found=True, center=(930, 485), confidence=0.97),
@@ -120,6 +122,7 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
+            MagicMock(found=False, confidence=0.20),
             MagicMock(found=True, center=(120, 175), confidence=0.99),
             MagicMock(found=True, center=(120, 275), confidence=0.98),
             MagicMock(found=False, confidence=0.20),
@@ -132,8 +135,8 @@ class OpenFreeMallChestsRoutineTest(unittest.TestCase):
         routine = self._routine(action_engine, paths)
 
         self.assertTrue(routine.run())
-        self.assertEqual(action_engine.detect.call_count, 5)
-        self.assertEqual(action_engine.swipe.call_count, 2)
+        self.assertEqual(action_engine.detect.call_count, 6)
+        self.assertEqual(action_engine.swipe.call_count, 3)
         self.assertEqual(action_engine.tap.call_count, 4)
 
 
