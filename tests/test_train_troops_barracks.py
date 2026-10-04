@@ -148,18 +148,51 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
         self.assertTrue(routine._enter_quantity(800))
         self.assertEqual(action_engine.tap.call_count, 5)
 
+    def test_grunt_card_accepts_strong_local_match_below_global_threshold(self):
+        temp_dir, paths = self._make_templates()
+        self.addCleanup(temp_dir.cleanup)
+
+        action_engine = MagicMock()
+        action_engine.detect.return_value = MagicMock(
+            found=False,
+            center=(210, 260),
+            confidence=0.6466,
+        )
+        action_engine.tap.return_value = True
+
+        routine = self._make_routine(action_engine, paths)
+
+        self.assertTrue(routine._select_grunt())
+        action_engine.tap.assert_called_once_with(210, 260)
+
+    def test_grunt_card_rejects_weak_match(self):
+        temp_dir, paths = self._make_templates()
+        self.addCleanup(temp_dir.cleanup)
+
+        action_engine = MagicMock()
+        action_engine.detect.return_value = MagicMock(
+            found=False,
+            center=(210, 260),
+            confidence=0.40,
+        )
+
+        routine = self._make_routine(action_engine, paths)
+
+        self.assertFalse(routine._select_grunt())
+        action_engine.tap.assert_not_called()
+
     def test_train_800_without_shortage_then_speedup(self):
         temp_dir, paths = self._make_templates()
         self.addCleanup(temp_dir.cleanup)
 
         action_engine = MagicMock()
         action_engine.detect.side_effect = [
-            MagicMock(found=True, center=(210, 260), confidence=0.98),  # grunt
-            MagicMock(found=True, center=(660, 300), confidence=0.97),  # quantity
-            MagicMock(found=True, center=(360, 300), confidence=0.96),  # keypad
-            MagicMock(found=False, center=None, confidence=0.10),       # shortage
-            MagicMock(found=True, center=(820, 475), confidence=0.98),  # train
-            MagicMock(found=True, center=(600, 475), confidence=0.98),  # finish
+            MagicMock(found=True, center=(210, 260), confidence=0.98),
+            MagicMock(found=True, center=(660, 300), confidence=0.97),
+            MagicMock(found=True, center=(360, 300), confidence=0.96),
+            MagicMock(found=False, center=None, confidence=0.10),
+            MagicMock(found=True, center=(820, 475), confidence=0.98),
+            MagicMock(found=True, center=(600, 475), confidence=0.98),
         ]
         action_engine.tap.return_value = True
 
@@ -185,7 +218,7 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
 
         routine = self._make_routine(action_engine, paths)
 
-        self.assertTrue(routine._train_800())
+        self.assertTrue(routine._train(800))
         self.assertEqual(action_engine.tap.call_count, 7)
 
     def test_ensure_one_grunt_reuses_parameterized_quantity_flow(self):
@@ -197,13 +230,16 @@ class TrainTroopsBarracksRoutineTest(unittest.TestCase):
             MagicMock(found=True, center=(210, 260), confidence=0.98),
             MagicMock(found=True, center=(660, 300), confidence=0.97),
             MagicMock(found=True, center=(360, 300), confidence=0.96),
+            MagicMock(found=False, center=None, confidence=0.10),
+            MagicMock(found=True, center=(820, 475), confidence=0.98),
+            MagicMock(found=True, center=(600, 475), confidence=0.98),
         ]
         action_engine.tap.return_value = True
 
         routine = self._make_routine(action_engine, paths)
 
         self.assertTrue(routine.ensure_one_grunt())
-        self.assertEqual(action_engine.tap.call_count, 3)
+        self.assertEqual(action_engine.tap.call_count, 6)
 
 
 if __name__ == "__main__":
