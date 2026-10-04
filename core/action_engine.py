@@ -132,6 +132,39 @@ class ActionEngine:
 
         return result
 
+    def detect_with_threshold(self, template_path, threshold, roi=None):
+        """
+        Detect one template using a local threshold while preserving the
+        detector's normal global threshold for all existing callers.
+        """
+        self.log(
+            f"[ActionEngine] DETECT: {template_path} "
+            f"threshold={float(threshold):.2f}"
+        )
+
+        image = self.screenshot()
+
+        if image is None:
+            self.log("[ActionEngine] DETECT FAILED: screenshot")
+            return None
+
+        result = self.detector.detect(
+            image=image,
+            template_path=template_path,
+            roi=roi,
+            threshold=threshold,
+        )
+
+        self.last_screenshot = image
+        self.last_detection = result
+
+        if result.found:
+            self.log("[ActionEngine] DETECT SUCCESS")
+        else:
+            self.log("[ActionEngine] DETECT NOT FOUND")
+
+        return result
+
     def detect_all(self, template_path, roi=None, max_results=50):
         """
         Detect every distinct occurrence of a template in one screenshot.
