@@ -1,0 +1,175 @@
+# Daily Quest — Gather Resources (Food / Stones / Timber / Ore / Gold)
+
+## Status
+
+Design checkpoint. This document defines the shared routine and the validation plan.
+Do not mark this quest as live-tested until Search navigation, templates, and troop dispatch
+have been verified on LDPlayer.
+
+## Daily Quest definitions
+
+The existing `quests/definitions.py` contains these exact quest IDs and targets:
+
+- `gather_food`: Gather Food from Fields on the Kingdom Map — 100000
+- `gather_stones`: Gather Stones from Rocks on the Kingdom Map — 100000
+- `gather_timber`: Gather Timber from Woods on the Kingdom Map — 100000
+- `gather_ore`: Gather Ore from Rich Veins on the Kingdom Map — 100000
+- `gather_gold`: Gather Gold from Ruins on the Kingdom Map — 35000
+
+All five IDs should use one shared `GatherResourcesRoutine`, configured by resource type
+and quest target. Keep the exact existing quest IDs and display names.
+
+## Confirmed World Map behavior
+
+- The game has a coordinate Search: enter X/Y and the map moves the searched location to the
+  center of the screen.
+- The player's Castle coordinate is the starting point for choosing the initial search area.
+- After moving to a search coordinate, inspect the center and visible surrounding area before
+  panning.
+- The map contains mixed resource tiles, so the routine must verify the selected tile's
+  resource type instead of assuming that a nearby tile matches the quest.
+
+## Architecture
+
+AutomationEngine
+-> Global Popup Safety
+-> QuestManager
+-> GatherResourcesRoutine
+-> WorldNavigation / ActionEngine
+-> Detector / Vision
+-> ADBController
+
+The routine must not call ADB directly. Popup handling remains owned by the existing
+AutomationEngine / PopupManager pipeline.
+
+## Routine contract
+
+Proposed routine configuration:
+
+- `resource_type`: `food`, `stone`, `timber`, `ore`, or `gold`
+- `quest_target`: 100000, except gold = 35000
+- bounded local-search limits and swipe parameters, configurable for unit tests
+
+Suggested responsibilities:
+
+1. Confirm or navigate to the World Map using the existing WorldNavigation contract.
+2. Obtain the player's Castle X/Y from the in-game UI. Do not guess coordinates or hardcode
+   a player's location.
+3. Open the game's coordinate Search, enter the selected X/Y, and submit.
+4. Wait for the map to settle and verify the World Map is visible.
+5. Detect the target resource in the current centered viewport and nearby visible area.
+6. If no valid target exists, pan gently in a bounded 8-direction search pattern. After each
+   swipe, wait, capture a fresh screenshot through ActionEngine, and detect again.
+7. When a candidate is found, tap the detected candidate and inspect the resource information
+   panel.
+8. Verify resource type, level if relevant, and that the tile is unoccupied / gatherable.
+9. Tap Gather only after the information panel confirms a valid target.
+10. Verify the troop-selection / march UI, choose a valid troop configuration, and confirm.
+11. Verify that the march started or that the game's quest progress changed. A successful tap
+    alone is not proof of completion.
+12. Return success only when the game's observable state confirms the expected action or
+    quest completion. If progress requires time gathering, report that the march started rather
+    than claiming the entire resource target was collected.
+13. If no valid target is found within the configured search bound, stop safely and return
+    failure; never pan indefinitely.
+
+## Search strategy
+
+- Starting anchor: player's Castle coordinate.
+- Search target: an X/Y coordinate selected relative to that anchor.
+- The game's Search centers the selected coordinate on screen.
+- First inspect the center and current viewport.
+- Then search locally in eight directions: N, NE, E, SE, S, SW, W, NW.
+- A swipe's finger direction is opposite the map region revealed; calibrate and test the
+  swipe mapping before production use.
+- Use a deterministic, bounded order and track already-scanned directions/areas within one run.
+- Re-detect after every pan; never reuse screen coordinates from a prior viewport.
+- Do not repeatedly search the same area when a resource is occupied or unsuitable; mark that
+  candidate as skipped for the current run.
+- The exact X/Y step size, swipe endpoints, duration, and whether Search UI exposes the
+  player's Castle coordinate must be confirmed against the current 960x540 LDPlayer screen.
+  Do not invent these values in production code.
+
+## Vision assets to capture
+
+Proposed folder: `assets/gather_resources/`
+
+Required templates should be cropped from current LDPlayer screenshots and validated before
+the routine is enabled:
+
+- `search_button.png` — opens coordinate Search, if the button is stable enough for matching.
+- `search_panel.png` — confirms the coordinate input panel is open.
+- `search_submit.png` — submits X/Y, if not reliably handled by a verified fixed control.
+- `resource_food.png` — distinctive Field/Food tile artwork.
+- `resource_stone.png` — distinctive Rock/Stone tile artwork.
+- `resource_timber.png` — distinctive Woods/Timber tile artwork.
+- `resource_ore.png` — distinctive Rich Vein/Ore tile artwork.
+- `resource_gold.png` — distinctive Ruins/Gold tile artwork.
+- `gather_button.png` — Gather action in the resource detail panel.
+- `march_confirm.png` — final confirmation control, if needed for the observed march flow.
+- `resource_detail_panel.png` — optional panel-state verification if reliable.
+
+Do not add templates based only on guessed artwork. Check whether the template is distinctive,
+stable, and sufficiently large at the fixed 960x540 resolution. If text or resource labels vary,
+prefer a stable icon or panel region and verify the resource type using multiple signals.
+
+## Search UI / coordinate input discovery
+
+Before coding the Search input interactions, capture the actual open Search panel. Confirm:
+
+- where the X and Y input fields are located;
+- whether the player's current Castle X/Y can be read from the UI;
+- how the Search panel is opened and submitted;
+- whether the panel provides directional or next-target controls;
+- what happens when the requested coordinate is invalid or outside the kingdom bounds.
+
+Do not hardcode input coordinates until these controls have been observed and tested.
+
+## Safety and failure handling
+
+- Required templates missing: fail before interacting with the game.
+- Search panel not detected or coordinate submission not verified: stop without panning.
+- Candidate type cannot be verified: do not Gather.
+- Occupied, unavailable, or unsuitable tile: skip it and continue within the bounded search.
+- Swipe or tap failure: stop the current step and report failure.
+- Troop selection / march confirmation not detected: do not repeat Gather blindly.
+- Popup handling remains centralized in PopupManager.
+- Never use stale screen coordinates after Search or swipe.
+- No OCR assumptions, account-specific coordinates, or fabricated map positions.
+- Quest progress is sourced from game UI; the routine must not calculate completion solely
+  from the number of successful taps.
+
+## Unit-test plan
+
+Add `tests/test_gather_resources.py` with mocked ActionEngine and temporary template paths.
+Cover at minimum:
+
+1. Missing templates fail before any tap or swipe.
+2. Wrong or unverified resource candidate is never gathered.
+3. Correct unoccupied resource reaches Gather and march-confirm flow.
+4. Occupied resource is skipped.
+5. Search panel or coordinate submission failure stops safely.
+6. Each successful swipe triggers a fresh detection.
+7. Search is bounded and never pans indefinitely.
+8. A failed tap/swipe returns failure.
+9. Quest target and resource type are correct for all five quest IDs.
+10. A Gather tap alone does not report quest completion.
+
+## Live-test plan
+
+1. Capture Search panel and confirm coordinate entry controls.
+2. Capture / crop the resource and Gather templates.
+3. Run unit tests.
+4. Run detect-only tests on each template.
+5. Live-test one resource type first (Timber is suitable because the supplied screenshot shows
+   a Woods Lv.1 detail panel with Timber amount and an Unoccupied status).
+6. Confirm the tile is centered/searchable, detail panel validation works, and march starts.
+7. Repeat with occupied/wrong-type tiles to verify safe rejection.
+8. Only after the shared routine passes, enable the remaining four resource definitions.
+9. Run the full existing test suite and commit after live-test results are confirmed.
+
+## Current implementation boundary
+
+This is a design specification, not a claim that the routine, templates, or quest registration
+have already been implemented. The next implementation step is to inspect the actual Search UI
+and then add the shared routine, tests, and definition wiring in a separate change.
