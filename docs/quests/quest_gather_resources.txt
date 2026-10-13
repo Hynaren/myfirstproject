@@ -208,6 +208,36 @@ Cover at minimum:
 8. Only after the shared routine passes, enable the remaining four resource definitions.
 9. Run the full existing test suite and commit after live-test results are confirmed.
 
+
+## Coordinate Search helper implementation checkpoint
+
+A first reusable helper now exists at `navigation/coordinate_search.py`, with unit-test
+coverage in `tests/test_coordinate_search.py`. It uses the fixed UI point estimates recorded
+above and requires `assets/gather_resources/search_panel.png` to verify that Search opened.
+It intentionally does not yet register or run any Gather Resources quest.
+
+Important limitations before live use:
+
+- All tap points are estimated from screenshots and still require live calibration.
+- The helper clears each coordinate field using four bounded backspace taps. Verify in-game
+  that extra backspace taps at zero are harmless and that the displayed value is cleared.
+- The helper verifies the Search panel only; after pressing Go, verify the displayed map
+  coordinate / centered location before any resource scan.
+- The helper does not yet read the player's Castle coordinate, choose a search coordinate,
+  pan the map, select a resource, or send troops.
+- The helper's unit tests use mocked ActionEngine behavior and do not establish live-game
+  correctness. Run `python -m unittest tests.test_coordinate_search -v` locally before
+  proceeding, then live-test on LDPlayer.
+
+Next implementation steps:
+
+1. Run the new unit test on the user's local checkout.
+2. Crop `search_panel.png` from the supplied Search-panel screenshot at the 960x540 scale.
+3. Live-test opening Search, clearing X/Y, keypad entry, green check, and Go.
+4. Add an explicit verification step for the map's displayed X/Y after Go.
+5. Implement Castle-coordinate reading and bounded eight-direction scanning only after
+   coordinate entry is reliable.
+
 ## Current implementation boundary
 
 This is a design specification, not a claim that the routine, templates, or quest registration
