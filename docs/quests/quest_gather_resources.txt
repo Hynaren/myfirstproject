@@ -125,6 +125,46 @@ Before coding the Search input interactions, capture the actual open Search pane
 
 Do not hardcode input coordinates until these controls have been observed and tested.
 
+
+
+## Confirmed Search UI from screenshots (960x540)
+
+The user confirmed that the Search icon, X/Y fields, keypad, and buttons stay at fixed
+screen positions. Approximate centers observed in the supplied screenshots:
+
+- World Map Search magnifying-glass icon: (452, 70)
+- X coordinate field: (497, 202)
+- Y coordinate field: (563, 202)
+- Search panel Go button: approximately (475, 284)
+- Numeric keypad digits:
+  - 1 (650, 224), 2 (714, 224), 3 (781, 224)
+  - 4 (650, 270), 5 (714, 270), 6 (781, 270)
+  - 7 (650, 319), 8 (714, 319), 9 (781, 319)
+  - 0 (667, 366)
+- Keypad backspace: approximately (782, 174)
+- Keypad green confirm/check: approximately (765, 366)
+
+These are initial estimates read from screenshots, not yet live-tested tap points. Keep them in
+one named coordinate map/configuration rather than scattering literals through the routine.
+Before each interaction, verify the expected panel state using a screenshot/template where
+available. If any point misses during live-test, recalibrate the configuration only.
+
+### Coordinate entry procedure
+
+1. Tap the Search icon and verify the Search panel.
+2. Tap X field to open the numeric keypad.
+3. Replace the existing X value using the keypad backspace control, enter the desired digits,
+   then tap the green check.
+4. Tap Y field and repeat.
+5. Verify the displayed X/Y values where possible, then tap Go.
+6. Wait for map movement to settle and confirm the selected coordinate is centered.
+7. Never assume keypad input succeeded merely because taps returned success.
+
+The keypad is an in-game numeric keypad; do not use desktop keyboard input unless separately
+verified. Since coordinate values vary, clear/replace the currently displayed digits safely
+instead of assuming a fixed digit count. Test whether the backspace button removes one digit
+per tap and what the UI shows for zero before enabling automated entry.
+
 ## Safety and failure handling
 
 - Required templates missing: fail before interacting with the game.
